@@ -1,6 +1,7 @@
 import express from 'express'
 import nacl from 'tweetnacl/nacl-fast'
 import { decodeBase64, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
+import ws from 'ws'
 
 class EphemeralServer {
   constructor (port) {
@@ -12,7 +13,17 @@ class EphemeralServer {
 
     this.server = app.listen(port, () => console.log(`Ephemeral server listening on ${port}!`))
 
+    let wss = new ws.Server({ 'port': port + 1 })
+
     this.storage = {}
+
+    wss.on('connection', (ws) => {
+      ws.on('message', (message) => {
+        this.subscribe(ws, JSON.parse(message))
+      })
+    })
+
+    this.wss = wss
   }
 
   claim (req, res) {
@@ -20,9 +31,7 @@ class EphemeralServer {
 
     if (message != null) {
       let publicKey = req.body.publicKey
-      if (!Object.keys(this.storage).includes(publicKey)) {
-        this.storage[publicKey] = { 'claims': {}, 'last': null }
-      }
+      this.lazyInitStorage(publicKey)
 
       let claimId = encodeBase64(nacl.randomBytes(32))
 
@@ -30,6 +39,16 @@ class EphemeralServer {
 
       this.storage[publicKey]['last'] = claimId
       res.send(JSON.stringify(claimId))
+
+      for (let subscriberWs of this.storage[publicKey].subscribers) {
+        subscriberWs.send(JSON.stringify(claimId))
+      }
+    }
+  }
+
+  lazyInitStorage (publicKey) {
+    if (!Object.keys(this.storage).includes(publicKey)) {
+      this.storage[publicKey] = { 'claims': {}, 'last': null, 'subscribers': [] }
     }
   }
 
@@ -48,6 +67,12 @@ class EphemeralServer {
     }
   }
 
+  subscribe (ws, publicKey) {
+    this.lazyInitStorage(publicKey)
+
+    this.storage[publicKey].subscribers.push(ws)
+  }
+
   getMessageFromBody (body) {
     if (body.signedMessage != null && body.publicKey != null) {
       return JSON.parse(encodeUTF8(nacl.sign.open(decodeBase64(body.signedMessage), decodeBase64(body.publicKey))))
@@ -56,6 +81,7 @@ class EphemeralServer {
 
   close () {
     this.server.close()
+    this.wss.close()
   }
 }
 

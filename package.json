@@ -16,8 +16,11 @@
     "axios": "^0.18.0",
     "discipl-core-baseconnector": "git+https://github.com/discipl/discipl-core-baseconnector.git",
     "express": "^4.16.4",
+    "rxjs": "^6.3.3",
     "tweetnacl": "^1.0.0",
-    "tweetnacl-util": "^0.15.0"
+    "tweetnacl-util": "^0.15.0",
+    "websocket": "^1.0.28",
+    "ws": "^6.1.2"
   },
   "devDependencies": {
     "@babel/core": "^7.2.2",

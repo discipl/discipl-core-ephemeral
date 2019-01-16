@@ -1,5 +1,9 @@
 import nacl from 'tweetnacl/nacl-fast'
 import axios from 'axios'
+import rxjs, { Observable } from 'rxjs'
+import { map } from 'rxjs/operators'
+import { WebSocketSubject, webSocket } from 'rxjs/webSocket'
+import { w3cwebsocket } from 'websocket'
 import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
 import { BaseConnector } from 'discipl-core-baseconnector'
 import { EphemeralServer } from './server'
@@ -9,8 +13,9 @@ class EphemeralConnector extends BaseConnector {
     return 'ephemeral'
   }
 
-  configure (serverEndpoint) {
+  configure (serverEndpoint, websocketEndpoint) {
     this.serverEndpoint = serverEndpoint
+    this.websocketEndpoint = websocketEndpoint;
   }
 
   async getSsidOfClaim (reference) {
@@ -46,7 +51,16 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async subscribe (ssid) {
-    throw new TypeError('Subscribe is not implemented')
+    let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': w3cwebsocket })
+
+    socket.next(ssid.pubkey)
+
+    let processedSocked = socket.pipe(map(claimId =>
+      encodeBase64(decodeUTF8(JSON.stringify({
+        'claimId': claimId,
+        'publicKey': ssid.pubkey
+      })))))
+    return processedSocked
   }
 }
 

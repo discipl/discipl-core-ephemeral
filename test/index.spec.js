@@ -4,10 +4,12 @@
 import { expect } from 'chai'
 import EphemeralConnector from '../src/index'
 import { EphemeralServer } from '../src/server'
+import { first } from 'rxjs/operators'
 
 let ephemeralServer
 
 const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
+const EPHEMERAL_WEBSOCKET_ENDPOINT = 'ws://localhost:3233'
 
 describe('discipl-ephemeral-connector', () => {
   before(() => {
@@ -80,5 +82,23 @@ describe('discipl-ephemeral-connector', () => {
 
     expect(claimLinkSsid.pubkey).to.be.a('string')
     expect(ssid.pubkey).to.equal(claimLinkSsid.pubkey)
+  })
+
+  it('should be able to claim something and listen to the connector', async () => {
+    let ephemeralConnector = new EphemeralConnector()
+
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+
+    let ssid = await ephemeralConnector.newSsid()
+    let observable = await ephemeralConnector.subscribe(ssid)
+    let subscriber = observable.pipe(first()).toPromise()
+
+
+    let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
+
+    expect(claimLink).to.be.a('string')
+    let subscriberResult = await subscriber
+
+    expect(subscriberResult).to.equal(claimLink)
   })
 })
