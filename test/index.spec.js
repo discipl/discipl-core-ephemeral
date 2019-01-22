@@ -107,10 +107,12 @@ describe('discipl-ephemeral-connector', () => {
     let observed = await observer
 
     expect(observed).to.deep.equal({
-      'data': {
-        'need': 'beer'
+      'claim': {
+        'data': {
+          'need': 'beer'
+        },
+        'previous': null
       },
-      'previous': null,
       'ssid': {
         'pubkey': ssid.pubkey
       }
@@ -134,10 +136,12 @@ describe('discipl-ephemeral-connector', () => {
     let observed = await observer
 
     expect(observed).to.deep.equal({
-      'data': {
-        'need': 'beer'
+      'claim': {
+        'data': {
+          'need': 'beer'
+        },
+        'previous': null
       },
-      'previous': null,
       'ssid': {
         'pubkey': ssid.pubkey
       }
@@ -161,10 +165,12 @@ describe('discipl-ephemeral-connector', () => {
     let observed = await observer
 
     expect(observed).to.deep.equal({
-      'data': {
-        'need': 'wine'
+      'claim': {
+        'data': {
+          'need': 'wine'
+        },
+        'previous': claimLink
       },
-      'previous': claimLink,
       'ssid': {
         'pubkey': ssid.pubkey
       }
@@ -188,10 +194,12 @@ describe('discipl-ephemeral-connector', () => {
     let observed = await observer
 
     expect(observed).to.deep.equal({
-      'data': {
-        'need': 'wine'
+      'claim': {
+        'data': {
+          'need': 'wine'
+        },
+        'previous': claimLink
       },
-      'previous': claimLink,
       'ssid': {
         'pubkey': ssid.pubkey
       }

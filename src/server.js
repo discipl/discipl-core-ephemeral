@@ -47,8 +47,7 @@ class EphemeralServer {
 
       for (let subscriberWs of this.storage[publicKey].subscribers.concat(this.globalObservers)) {
         let claim = this.storage[publicKey]['claims'][claimId]
-        claim.ssid = { 'pubkey': publicKey }
-        subscriberWs.send(JSON.stringify(this.storage[publicKey]['claims'][claimId]), {}, (error) => {
+        subscriberWs.send(JSON.stringify({ 'claim': claim, 'ssid': { 'pubkey': publicKey } }), {}, (error) => {
           if (error != null && !error.message.includes('WebSocket is not open')) {
             console.log('Error while sending ws message: ' + error)
           }
