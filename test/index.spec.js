@@ -11,6 +11,12 @@ let ephemeralServer
 const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
 const EPHEMERAL_WEBSOCKET_ENDPOINT = 'ws://localhost:3233'
 
+const timeoutPromise = (timeoutMillis) => {
+  return new Promise(function(resolve, reject) {
+    setTimeout(() => resolve(), timeoutMillis)
+  })
+}
+
 describe('discipl-ephemeral-connector', () => {
   before(() => {
     ephemeralServer = new EphemeralServer(3232)
@@ -92,6 +98,8 @@ describe('discipl-ephemeral-connector', () => {
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(ssid)
     let observer = observable.pipe(take(1)).toPromise()
+    // TODO: Fix race conditions
+    await timeoutPromise(50)
 
     let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
 
@@ -117,6 +125,8 @@ describe('discipl-ephemeral-connector', () => {
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(ssid, { 'need': 'wine' })
     let observer = observable.pipe(take(1)).toPromise()
+    // TODO: Fix race conditions
+    await timeoutPromise(50)
 
     let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
     await ephemeralConnector.claim(ssid, { 'need': 'wine' })
@@ -142,6 +152,8 @@ describe('discipl-ephemeral-connector', () => {
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(ssid, { 'need': null })
     let observer = observable.pipe(take(1)).toPromise()
+    // TODO: Fix race conditions
+    await timeoutPromise(50)
 
     let claimLink = await ephemeralConnector.claim(ssid, { 'desire': 'beer' })
     await ephemeralConnector.claim(ssid, { 'need': 'wine' })
