@@ -41,7 +41,13 @@ class EphemeralServer {
       res.send(JSON.stringify(claimId))
 
       for (let subscriberWs of this.storage[publicKey].subscribers) {
-        subscriberWs.send(JSON.stringify(claimId))
+        let claim = this.storage[publicKey]['claims'][claimId]
+        claim.ssid = { 'pubkey': publicKey }
+        subscriberWs.send(JSON.stringify(this.storage[publicKey]['claims'][claimId]), {}, (error) => {
+          if (error != null) {
+            console.log('Error while sending ws message: ' + error)
+          }
+        })
       }
     }
   }

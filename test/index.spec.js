@@ -4,7 +4,7 @@
 import { expect } from 'chai'
 import EphemeralConnector from '../src/index'
 import { EphemeralServer } from '../src/server'
-import { first } from 'rxjs/operators'
+import { take } from 'rxjs/operators'
 
 let ephemeralServer
 
@@ -90,15 +90,72 @@ describe('discipl-ephemeral-connector', () => {
     ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
 
     let ssid = await ephemeralConnector.newSsid()
-    let observable = await ephemeralConnector.subscribe(ssid)
-    let subscriber = observable.pipe(first()).toPromise()
-
+    let observable = await ephemeralConnector.observe(ssid)
+    let observer = observable.pipe(take(1)).toPromise()
 
     let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
 
     expect(claimLink).to.be.a('string')
-    let subscriberResult = await subscriber
+    let observed = await observer
 
-    expect(subscriberResult).to.equal(claimLink)
+    expect(observed).to.deep.equal({
+      'data': {
+        'need': 'beer'
+      },
+      'previous': null,
+      'ssid': {
+        'pubkey': ssid.pubkey
+      }
+    })
+  })
+
+  it('should be able to claim something and listen to the connector with a filter', async () => {
+    let ephemeralConnector = new EphemeralConnector()
+
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+
+    let ssid = await ephemeralConnector.newSsid()
+    let observable = await ephemeralConnector.observe(ssid, { 'need': 'wine' })
+    let observer = observable.pipe(take(1)).toPromise()
+
+    let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
+    await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+    await ephemeralConnector.claim(ssid, { 'need': 'tea' })
+    let observed = await observer
+
+    expect(observed).to.deep.equal({
+      'data': {
+        'need': 'wine'
+      },
+      'previous': claimLink,
+      'ssid': {
+        'pubkey': ssid.pubkey
+      }
+    })
+  })
+
+  it('should be able to claim something and listen to the connector with a filter on a predicate', async () => {
+    let ephemeralConnector = new EphemeralConnector()
+
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+
+    let ssid = await ephemeralConnector.newSsid()
+    let observable = await ephemeralConnector.observe(ssid, { 'need': null })
+    let observer = observable.pipe(take(1)).toPromise()
+
+    let claimLink = await ephemeralConnector.claim(ssid, { 'desire': 'beer' })
+    await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+    await ephemeralConnector.claim(ssid, { 'desire': 'tea' })
+    let observed = await observer
+
+    expect(observed).to.deep.equal({
+      'data': {
+        'need': 'wine'
+      },
+      'previous': claimLink,
+      'ssid': {
+        'pubkey': ssid.pubkey
+      }
+    })
   })
 })

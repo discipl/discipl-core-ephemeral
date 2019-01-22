@@ -1,8 +1,7 @@
 import nacl from 'tweetnacl/nacl-fast'
 import axios from 'axios'
-import rxjs, { Observable } from 'rxjs'
-import { map } from 'rxjs/operators'
-import { WebSocketSubject, webSocket } from 'rxjs/webSocket'
+import { filter, map } from 'rxjs/operators'
+import { WebSocketSubject } from 'rxjs/webSocket'
 import { w3cwebsocket } from 'websocket'
 import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
 import { BaseConnector } from 'discipl-core-baseconnector'
@@ -15,7 +14,7 @@ class EphemeralConnector extends BaseConnector {
 
   configure (serverEndpoint, websocketEndpoint) {
     this.serverEndpoint = serverEndpoint
-    this.websocketEndpoint = websocketEndpoint;
+    this.websocketEndpoint = websocketEndpoint
   }
 
   async getSsidOfClaim (reference) {
@@ -50,16 +49,35 @@ class EphemeralConnector extends BaseConnector {
     return response.data
   }
 
-  async subscribe (ssid) {
+  async observe (ssid, claimFilter) {
     let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': w3cwebsocket })
 
     socket.next(ssid.pubkey)
 
-    let processedSocked = socket.pipe(map(claimId =>
-      encodeBase64(decodeUTF8(JSON.stringify({
-        'claimId': claimId,
-        'publicKey': ssid.pubkey
-      })))))
+    let processedSocked = socket.pipe(filter(claim => {
+      if (claimFilter != null) {
+        for (let predicate of Object.keys(claimFilter)) {
+          if (claim['data'][predicate] == null) {
+            // Predicate not present in claim
+            return false
+          }
+
+          if (claimFilter[predicate] != null && claimFilter[predicate] !== claim['data'][predicate]) {
+            // Object is provided in filter, but does not match with actual claim
+            return false
+          }
+        }
+      }
+
+      return ssid == null || claim.ssid.pubkey === ssid.pubkey
+    })
+    )
+      .pipe(map(claim => {
+        if (claim.previous != null) {
+          claim.previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': claim.previous, 'publicKey': ssid.pubkey })))
+        }
+        return claim
+      }))
     return processedSocked
   }
 }
