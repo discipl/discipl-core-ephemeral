@@ -16,10 +16,15 @@ class EphemeralServer {
     let wss = new ws.Server({ 'port': port + 1 })
 
     this.storage = {}
+    this.globalObservers = []
 
     wss.on('connection', (ws) => {
       ws.on('message', (message) => {
-        this.subscribe(ws, JSON.parse(message))
+        if (message === '"GLOBAL"') {
+          this.observeGlobal(ws)
+        } else {
+          this.observe(ws, JSON.parse(message))
+        }
       })
     })
 
@@ -40,11 +45,11 @@ class EphemeralServer {
       this.storage[publicKey]['last'] = claimId
       res.send(JSON.stringify(claimId))
 
-      for (let subscriberWs of this.storage[publicKey].subscribers) {
+      for (let subscriberWs of this.storage[publicKey].subscribers.concat(this.globalObservers)) {
         let claim = this.storage[publicKey]['claims'][claimId]
         claim.ssid = { 'pubkey': publicKey }
         subscriberWs.send(JSON.stringify(this.storage[publicKey]['claims'][claimId]), {}, (error) => {
-          if (error != null) {
+          if (error != null && !error.message.includes('WebSocket is not open')) {
             console.log('Error while sending ws message: ' + error)
           }
         })
@@ -73,10 +78,14 @@ class EphemeralServer {
     }
   }
 
-  subscribe (ws, publicKey) {
+  observe (ws, publicKey) {
     this.lazyInitStorage(publicKey)
 
     this.storage[publicKey].subscribers.push(ws)
+  }
+
+  observeGlobal (ws) {
+    this.globalObservers.push(ws)
   }
 
   getMessageFromBody (body) {

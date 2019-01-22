@@ -51,8 +51,11 @@ class EphemeralConnector extends BaseConnector {
 
   async observe (ssid, claimFilter = {}) {
     let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': w3cwebsocket })
-
-    socket.next(ssid.pubkey)
+    if (ssid != null) {
+      socket.next(ssid.pubkey)
+    } else {
+      socket.next('GLOBAL')
+    }
 
     let processedSocked = socket.pipe(filter(claim => {
       if (claimFilter != null) {

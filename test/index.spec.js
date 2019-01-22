@@ -117,6 +117,33 @@ describe('discipl-ephemeral-connector', () => {
     })
   })
 
+  it('should be able to observe connector-wide', async () => {
+    let ephemeralConnector = new EphemeralConnector()
+
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+
+    let ssid = await ephemeralConnector.newSsid()
+    let observable = await ephemeralConnector.observe(null, { 'need': 'beer' })
+    let observer = observable.pipe(take(1)).toPromise()
+    // TODO: Fix race conditions
+    await timeoutPromise(50)
+
+    let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
+
+    expect(claimLink).to.be.a('string')
+    let observed = await observer
+
+    expect(observed).to.deep.equal({
+      'data': {
+        'need': 'beer'
+      },
+      'previous': null,
+      'ssid': {
+        'pubkey': ssid.pubkey
+      }
+    })
+  })
+
   it('should be able to claim something and listen to the connector with a filter', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
