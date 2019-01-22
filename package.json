@@ -1,0 +1,38 @@
+{
+  "name": "discipl-core-ephemeral",
+  "version": "0.0.1",
+  "description": "Discipl Core Ephemeral Connector",
+  "main": "src/index.js",
+  "repository": "https://github.com/discipl/discipl-core-ephemeral",
+  "author": "Bas Kaptijn",
+  "license": "GPL-3.0",
+  "scripts": {
+    "test": "nyc --reporter=html --reporter=text ./node_modules/.bin/mocha --require ./test/babel-register-helper.js ./test/**/*.spec.js",
+    "lint": "./node_modules/standard/bin/cmd.js --parser babel-eslint",
+    "lint-fix": "./node_modules/standard/bin/cmd.js --parser babel-eslint --fix",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && ./node_modules/codecov/bin/codecov"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "discipl-core-baseconnector": "git+https://github.com/discipl/discipl-core-baseconnector.git",
+    "express": "^4.16.4",
+    "rxjs": "^6.3.3",
+    "tweetnacl": "^1.0.0",
+    "tweetnacl-util": "^0.15.0",
+    "websocket": "^1.0.28",
+    "ws": "^6.1.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.2.2",
+    "@babel/preset-env": "^7.2.0",
+    "@babel/register": "^7.0.0",
+    "babel-eslint": "^10.0.1",
+    "chai": "^4.2.0",
+    "codecov": "^3.1.0",
+    "eslint": "^5.11.1",
+    "mocha": "^5.2.0",
+    "nyc": "^13.1.0",
+    "sinon": "^7.2.2",
+    "standard": "^12.0.1"
+  }
+}
