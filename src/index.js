@@ -49,7 +49,7 @@ class EphemeralConnector extends BaseConnector {
     return response.data
   }
 
-  async observe (ssid, claimFilter) {
+  async observe (ssid, claimFilter = {}) {
     let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': w3cwebsocket })
 
     socket.next(ssid.pubkey)
