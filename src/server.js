@@ -86,6 +86,7 @@ class EphemeralServer {
   }
 
   close () {
+    console.log('Stopping Ephemeral server')
     this.server.close()
     this.wss.close()
   }
