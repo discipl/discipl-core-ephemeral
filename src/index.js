@@ -2,7 +2,6 @@ import nacl from 'tweetnacl/nacl-fast'
 import axios from 'axios'
 import { filter, map } from 'rxjs/operators'
 import { WebSocketSubject } from 'rxjs/webSocket'
-import { w3cwebsocket } from 'websocket'
 import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
 import { BaseConnector } from 'discipl-core-baseconnector'
 import { EphemeralServer } from './server'
@@ -12,9 +11,10 @@ class EphemeralConnector extends BaseConnector {
     return 'ephemeral'
   }
 
-  configure (serverEndpoint, websocketEndpoint) {
+  configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
     this.serverEndpoint = serverEndpoint
     this.websocketEndpoint = websocketEndpoint
+    this.w3cwebsocket = w3cwebsocket
   }
 
   async getSsidOfClaim (reference) {
@@ -56,7 +56,7 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async observe (ssid, claimFilter = {}) {
-    let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': w3cwebsocket })
+    let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': this.w3cwebsocket })
     if (ssid != null) {
       socket.next(ssid.pubkey)
     } else {

@@ -5,6 +5,7 @@ import { expect } from 'chai'
 import EphemeralConnector from '../src/index'
 import { EphemeralServer } from '../src/server'
 import { take } from 'rxjs/operators'
+import { w3cwebsocket } from 'websocket'
 
 let ephemeralServer
 
@@ -44,7 +45,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to claim something', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
 
@@ -60,7 +61,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to obtain a reference to the last claim', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
 
@@ -76,7 +77,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to obtain the last claim', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
 
@@ -100,7 +101,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to get the ssid from a claim reference', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
 
@@ -117,7 +118,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to claim something and listen to the connector', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(ssid)
@@ -146,7 +147,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to observe connector-wide', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(null, { 'need': 'beer' })
@@ -175,7 +176,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to claim something and listen to the connector with a filter', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(ssid, { 'need': 'wine' })
@@ -204,7 +205,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to claim something and listen to the connector with a filter on a predicate', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(ssid, { 'need': null })
@@ -233,7 +234,7 @@ describe('discipl-ephemeral-connector', () => {
   it('should be able to claim something and listen to the connector with a filter on a predicate without an ssid', async () => {
     let ephemeralConnector = new EphemeralConnector()
 
-    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT)
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
 
     let ssid = await ephemeralConnector.newSsid()
     let observable = await ephemeralConnector.observe(null, { 'need': null })
