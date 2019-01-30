@@ -73,6 +73,30 @@ describe('discipl-ephemeral-connector', () => {
     expect(claimLink).to.equal(latestClaimLink)
   })
 
+  it('should be able to obtain the last claim', async () => {
+    let ephemeralConnector = new EphemeralConnector()
+
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT)
+
+    let ssid = await ephemeralConnector.newSsid()
+
+    let beerLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
+    let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+
+    let latestClaimLink = await ephemeralConnector.getLatestClaim(ssid)
+
+    expect(wineLink).to.equal(latestClaimLink)
+
+    let wineClaim = await ephemeralConnector.get(wineLink)
+
+    expect(wineClaim).to.deep.equal({
+      'data': {
+        'need': 'wine'
+      },
+      'previous': beerLink
+    })
+  })
+
   it('should be able to get the ssid from a claim reference', async () => {
     let ephemeralConnector = new EphemeralConnector()
 

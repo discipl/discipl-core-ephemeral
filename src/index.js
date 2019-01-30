@@ -44,9 +44,15 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async get (reference, ssid = null) {
-    let response = await axios.post(this.serverEndpoint + '/get', JSON.parse(encodeUTF8(decodeBase64(reference))))
+    let request = JSON.parse(encodeUTF8(decodeBase64(reference)))
+    let response = await axios.post(this.serverEndpoint + '/get', request)
 
-    return response.data
+    let result = response.data
+
+    if (result.previous != null) {
+      result.previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': result.previous, 'publicKey': request.publicKey })))
+    }
+    return result
   }
 
   async observe (ssid, claimFilter = {}) {
