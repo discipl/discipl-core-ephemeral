@@ -83,7 +83,7 @@ class EphemeralConnector extends BaseConnector {
     )
       .pipe(map(claim => {
         if (claim['claim'].previous != null) {
-          claim['claim'].previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': claim['claim'].previous, 'publicKey': ssid.pubkey })))
+          claim['claim'].previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': claim['claim'].previous, 'publicKey': claim['ssid']['pubkey'] })))
         }
         return claim
       }))
