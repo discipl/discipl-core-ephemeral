@@ -1,5 +1,5 @@
 import EphemeralConnector from './client'
-import EphemeralServer from './server'
+import { EphemeralServer } from './server'
 
-export default EphemeralConnector
 export { EphemeralServer }
+export default EphemeralConnector
