@@ -44,9 +44,15 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async get (reference, ssid = null) {
-    let response = await axios.post(this.serverEndpoint + '/get', JSON.parse(encodeUTF8(decodeBase64(reference))))
+    let request = JSON.parse(encodeUTF8(decodeBase64(reference)))
+    let response = await axios.post(this.serverEndpoint + '/get', request)
 
-    return response.data
+    let result = response.data
+
+    if (result.previous != null) {
+      result.previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': result.previous, 'publicKey': request.publicKey })))
+    }
+    return result
   }
 
   async observe (ssid, claimFilter = {}) {
@@ -60,12 +66,12 @@ class EphemeralConnector extends BaseConnector {
     let processedSocked = socket.pipe(filter(claim => {
       if (claimFilter != null) {
         for (let predicate of Object.keys(claimFilter)) {
-          if (claim['data'][predicate] == null) {
+          if (claim['claim']['data'][predicate] == null) {
             // Predicate not present in claim
             return false
           }
 
-          if (claimFilter[predicate] != null && claimFilter[predicate] !== claim['data'][predicate]) {
+          if (claimFilter[predicate] != null && claimFilter[predicate] !== claim['claim']['data'][predicate]) {
             // Object is provided in filter, but does not match with actual claim
             return false
           }
@@ -76,8 +82,8 @@ class EphemeralConnector extends BaseConnector {
     })
     )
       .pipe(map(claim => {
-        if (claim.previous != null) {
-          claim.previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': claim.previous, 'publicKey': ssid.pubkey })))
+        if (claim['claim'].previous != null) {
+          claim['claim'].previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': claim['claim'].previous, 'publicKey': claim['ssid']['pubkey'] })))
         }
         return claim
       }))
