@@ -5,6 +5,10 @@ import { BaseConnector } from 'discipl-core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
 
+/**
+ * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
+ * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
+ */
 class EphemeralConnector extends BaseConnector {
   constructor () {
     super()
@@ -79,6 +83,7 @@ class EphemeralConnector extends BaseConnector {
     let pubkey = ssid ? ssid.pubkey : null
     let subject = this.ephemeralClient.observe(pubkey)
 
+    // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(map(claim => {
       claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.ssid.pubkey)
       delete claim['claim'].signature

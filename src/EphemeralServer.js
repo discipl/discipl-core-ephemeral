@@ -2,6 +2,9 @@ import express from 'express'
 import ws from 'ws'
 import EphemeralStorage from './EphemeralStorage'
 
+/**
+ * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
+ */
 class EphemeralServer {
   constructor (port) {
     this.port = port

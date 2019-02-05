@@ -2,6 +2,9 @@ import { decodeBase64, decodeUTF8, encodeBase64, encodeUTF8 } from 'tweetnacl-ut
 import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
 
+/**
+ * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
+ */
 class EphemeralStorage {
   constructor () {
     this.storage = {}
