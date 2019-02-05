@@ -220,7 +220,6 @@ describe('discipl-ephemeral-connector', () => {
           expect(claimLink).to.be.a('string')
           let observed = await observer
 
-
           expect(observed).to.deep.equal({
             'claim': {
               'data': {
@@ -248,7 +247,6 @@ describe('discipl-ephemeral-connector', () => {
           let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
           await ephemeralConnector.claim(ssid, { 'need': 'tea' })
           let observed = await observer
-
 
           expect(observed).to.deep.equal({
             'claim': {
