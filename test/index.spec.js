@@ -63,7 +63,6 @@ describe('discipl-ephemeral-connector', () => {
     })
   })
   describe('with a backend', () => {
-
     before(() => {
       ephemeralServer = new EphemeralServer(3232)
       ephemeralServer.start()

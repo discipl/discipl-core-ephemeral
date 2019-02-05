@@ -1,6 +1,5 @@
 import axios from 'axios'
 import { WebSocketSubject } from 'rxjs/webSocket'
-import { map } from 'rxjs/operators'
 
 class EphemeralClient {
   constructor (serverEndpoint, websocketEndpoint, w3cwebsocket) {
