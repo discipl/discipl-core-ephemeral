@@ -8,7 +8,7 @@ import EphemeralConnector, { EphemeralServer } from '../src/index'
 import { take } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
-import { encodeUTF8, decodeBase64, encodeBase64 } from 'tweetnacl-util'
+import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
 
 let ephemeralServer
 
@@ -236,7 +236,7 @@ describe('discipl-ephemeral-connector', () => {
           await timeoutPromise(50)
 
           let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
-          let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+          await ephemeralConnector.claim(ssid, { 'need': 'wine' })
           await ephemeralConnector.claim(ssid, { 'need': 'tea' })
           let observed = await observer
 
@@ -263,7 +263,7 @@ describe('discipl-ephemeral-connector', () => {
           await timeoutPromise(50)
 
           let claimLink = await ephemeralConnector.claim(ssid, { 'desire': 'beer' })
-          let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+          await ephemeralConnector.claim(ssid, { 'need': 'wine' })
           await ephemeralConnector.claim(ssid, { 'desire': 'tea' })
           let observed = await observer
 
@@ -290,7 +290,7 @@ describe('discipl-ephemeral-connector', () => {
           await timeoutPromise(50)
 
           let claimLink = await ephemeralConnector.claim(ssid, { 'desire': 'beer' })
-          let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+          await ephemeralConnector.claim(ssid, { 'need': 'wine' })
           await ephemeralConnector.claim(ssid, { 'desire': 'tea' })
           let observed = await observer
 
