@@ -55,6 +55,10 @@ class EphemeralConnector extends BaseConnector {
 
     result.data = this._verifySignature(result.data, splitReference.signature, splitReference.publicKey)
 
+    if (result.data == null) {
+      return null
+    }
+
     return result
   }
 

@@ -35,7 +35,7 @@ class EphemeralServer {
     let verification = this.verifySignature(req.body)
 
     if (verification !== true) {
-      res.send(JSON.stringify(null))
+      res.status(401)
     }
 
     let signature = req.body.signature
@@ -43,7 +43,6 @@ class EphemeralServer {
 
     let publicKey = req.body.publicKey
     this.lazyInitStorage(publicKey)
-
 
     let nonce = encodeBase64(nacl.randomBytes(32))
 
@@ -77,7 +76,6 @@ class EphemeralServer {
   get (req, res) {
     let claimId = req.body.claimId
     let publicKey = JSON.parse(encodeUTF8(decodeBase64(claimId))).publicKey
-
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
       res.send(this.storage[publicKey]['claims'][claimId])

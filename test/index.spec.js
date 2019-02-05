@@ -7,6 +7,8 @@ import { EphemeralServer } from '../src/server'
 import { take } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
+import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
+
 let ephemeralServer
 
 const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
@@ -58,6 +60,27 @@ describe('discipl-ephemeral-connector', () => {
     expect(claim.data).to.deep.equal({ 'need': 'beer' })
     expect(claim.previous).to.equal(null)
     expect(claim.signature).to.be.a('string')
+  })
+
+  it('should not be able to claim something with a wrong key', async () => {
+    let ephemeralConnector = new EphemeralConnector()
+
+    ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
+
+    let ssid = await ephemeralConnector.newSsid()
+
+    let privkey = decodeBase64(ssid.privkey)
+    privkey.reverse()
+    ssid.privkey = encodeBase64(privkey)
+
+    let errorMessage
+    try {
+      await ephemeralConnector.claim(ssid, { 'need': 'beer' })
+    } catch (e) {
+      errorMessage = e.message
+    }
+
+    expect(errorMessage).to.equal('Request failed with status code 401')
   })
 
   it('should be able to obtain a reference to the last claim', async () => {
