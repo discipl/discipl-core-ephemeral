@@ -1,19 +1,22 @@
 import nacl from 'tweetnacl/nacl-fast'
-import axios from 'axios'
 import { filter, map } from 'rxjs/operators'
-import { WebSocketSubject } from 'rxjs/webSocket'
 import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
 import { BaseConnector } from 'discipl-core-baseconnector'
+import EphemeralClient from './EphemeralClient'
+import EphemeralStorage from './EphemeralStorage'
 
 class EphemeralConnector extends BaseConnector {
+  constructor () {
+    super()
+    this.ephemeralClient = new EphemeralStorage()
+  }
+
   getName () {
     return 'ephemeral'
   }
 
   configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
-    this.serverEndpoint = serverEndpoint
-    this.websocketEndpoint = websocketEndpoint
-    this.w3cwebsocket = w3cwebsocket
+    this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
   }
 
   async getSsidOfClaim (reference) {
@@ -21,9 +24,7 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async getLatestClaim (ssid) {
-    let response = await axios.post(this.serverEndpoint + '/getLatest', { 'publicKey': ssid.pubkey })
-
-    return response.data
+    return this.ephemeralClient.getLatest(ssid.pubkey)
   }
 
   async newSsid () {
@@ -43,16 +44,13 @@ class EphemeralConnector extends BaseConnector {
       'publicKey': ssid.pubkey
     }
 
-    let response = await axios.post(this.serverEndpoint + '/claim', claim)
-
-    return response.data
+    return this.ephemeralClient.claim(claim)
   }
 
   async get (reference, ssid = null) {
-    let response = await axios.post(this.serverEndpoint + '/get', { 'claimId': reference })
+    let result = await this.ephemeralClient.get(reference)
 
     let splitReference = JSON.parse(encodeUTF8(decodeBase64(reference)))
-    let result = response.data
 
     result.data = this._verifySignature(result.data, splitReference.signature, splitReference.publicKey)
 
@@ -75,14 +73,10 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async observe (ssid, claimFilter = {}) {
-    let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': this.w3cwebsocket })
-    if (ssid != null) {
-      socket.next(ssid.pubkey)
-    } else {
-      socket.next('GLOBAL')
-    }
+    let pubkey = ssid ? ssid.pubkey : null
+    let subject = this.ephemeralClient.observe(pubkey)
 
-    let processedSocked = socket.pipe(map(claim => {
+    let processedSubject = subject.pipe(map(claim => {
       claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.ssid.pubkey)
       return claim
     })).pipe(filter(claim => {
@@ -104,7 +98,7 @@ class EphemeralConnector extends BaseConnector {
     })
     )
 
-    return processedSocked
+    return processedSubject
   }
 }
 

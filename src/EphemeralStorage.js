@@ -1,5 +1,6 @@
 import { decodeBase64, decodeUTF8, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
 import nacl from 'tweetnacl/nacl-fast'
+import { Subject } from 'rxjs'
 
 class EphemeralStorage {
   constructor () {
@@ -7,8 +8,8 @@ class EphemeralStorage {
     this.globalObservers = []
   }
 
-  claim (claim) {
-    let verification = this.verifySignature(claim)
+  async claim (claim) {
+    let verification = this._verifySignature(claim)
 
     if (verification !== true) {
       return null
@@ -18,7 +19,7 @@ class EphemeralStorage {
     let message = claim.message
 
     let publicKey = claim.publicKey
-    this.lazyInitStorage(publicKey)
+    this._lazyInitStorage(publicKey)
 
     let nonce = encodeBase64(nacl.randomBytes(32))
 
@@ -39,7 +40,7 @@ class EphemeralStorage {
     return claimId
   }
 
-  get (claimId) {
+  async get (claimId) {
     let publicKey = JSON.parse(encodeUTF8(decodeBase64(claimId))).publicKey
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
@@ -47,29 +48,32 @@ class EphemeralStorage {
     }
   }
 
-  getLatest (publicKey) {
+  async getLatest (publicKey) {
     if (Object.keys(this.storage).includes(publicKey) && this.storage[publicKey]['last'] != null) {
       return this.storage[publicKey]['last']
     }
   }
 
-  observe (observer, publicKey = null) {
+  observe (publicKey = null) {
+    let subject = new Subject()
     if (publicKey !== null) {
-      this.lazyInitStorage(publicKey)
+      this._lazyInitStorage(publicKey)
 
-      this.storage[publicKey].observers.push(observer)
+      this.storage[publicKey].observers.push(subject)
     } else {
-      this.globalObservers.push(observer)
+      this.globalObservers.push(subject)
     }
+
+    return subject
   }
 
-  verifySignature (claim) {
+  _verifySignature (claim) {
     if (claim.message != null && claim.signature != null && claim.publicKey != null) {
       return nacl.sign.detached.verify(decodeBase64(claim.message), decodeBase64(claim.signature), decodeBase64(claim.publicKey))
     }
   }
 
-  lazyInitStorage (publicKey) {
+  _lazyInitStorage (publicKey) {
     if (!Object.keys(this.storage).includes(publicKey)) {
       this.storage[publicKey] = { 'claims': {}, 'last': null, 'observers': [] }
     }

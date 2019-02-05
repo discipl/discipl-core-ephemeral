@@ -20,6 +20,13 @@ class EphemeralServer {
     let wss = new ws.Server({ 'port': this.port + 1 })
     wss.on('connection', (ws) => {
       ws.on('message', (message) => {
+        let subject
+        if (message === '"GLOBAL"') {
+          subject = this.storage.observe()
+        } else {
+          subject = this.storage.observe(JSON.parse(message))
+        }
+
         let errorCallback = (error) => {
           if (error != null && !error.message.includes('WebSocket is not open')) {
             console.log('Error while sending ws message: ' + error)
@@ -29,19 +36,16 @@ class EphemeralServer {
         let observer = {
           'next': (value) => ws.send(JSON.stringify(value), {}, errorCallback)
         }
-        if (message === '"GLOBAL"') {
-          this.storage.observe(observer)
-        } else {
-          this.storage.observe(observer, JSON.parse(message))
-        }
+
+        subject.subscribe(observer)
       })
     })
 
     this.wss = wss
   }
 
-  claim (req, res) {
-    let result = this.storage.claim(req.body)
+  async claim (req, res) {
+    let result = await this.storage.claim(req.body)
 
     if (result == null) {
       res.sendStatus(401)
@@ -50,12 +54,12 @@ class EphemeralServer {
     }
   }
 
-  get (req, res) {
-    res.send(this.storage.get(req.body.claimId))
+  async get (req, res) {
+    res.send(await this.storage.get(req.body.claimId))
   }
 
-  getLatest (req, res) {
-    res.send(this.storage.getLatest(req.body.publicKey))
+  async getLatest (req, res) {
+    res.send(await this.storage.getLatest(req.body.publicKey))
   }
 
   close () {

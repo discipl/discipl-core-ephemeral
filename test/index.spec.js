@@ -40,6 +40,7 @@ describe('discipl-ephemeral-connector', () => {
 
     it('should be able to detect wrong signatures when getting a claim', async () => {
       let ephemeralConnector = new EphemeralConnector()
+      ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
       let axiosStub = sinon.stub(axios, 'post')
       // Valid data would be eyJuZWVkIjoid2luZSJ9
       axiosStub.returns({
