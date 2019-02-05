@@ -1,6 +1,6 @@
 import express from 'express'
 import nacl from 'tweetnacl/nacl-fast'
-import { decodeBase64, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
+import { decodeBase64, encodeBase64, encodeUTF8, decodeUTF8 } from 'tweetnacl-util'
 import ws from 'ws'
 
 class EphemeralServer {
@@ -32,28 +32,40 @@ class EphemeralServer {
   }
 
   claim (req, res) {
-    let message = this.getMessageFromBody(req.body)
+    let verification = this.verifySignature(req.body)
 
-    if (message != null) {
-      let publicKey = req.body.publicKey
-      this.lazyInitStorage(publicKey)
-
-      let claimId = encodeBase64(nacl.randomBytes(32))
-
-      this.storage[publicKey]['claims'][claimId] = { 'data': message, 'previous': this.storage[publicKey]['last'] }
-
-      this.storage[publicKey]['last'] = claimId
-      res.send(JSON.stringify(claimId))
-
-      for (let subscriberWs of this.storage[publicKey].subscribers.concat(this.globalObservers)) {
-        let claim = this.storage[publicKey]['claims'][claimId]
-        subscriberWs.send(JSON.stringify({ 'claim': claim, 'ssid': { 'pubkey': publicKey } }), {}, (error) => {
-          if (error != null && !error.message.includes('WebSocket is not open')) {
-            console.log('Error while sending ws message: ' + error)
-          }
-        })
-      }
+    if (verification !== true) {
+      res.send(JSON.stringify(null))
     }
+
+    let signature = req.body.signature
+    let message = req.body.message
+
+    let publicKey = req.body.publicKey
+    this.lazyInitStorage(publicKey)
+
+
+    let nonce = encodeBase64(nacl.randomBytes(32))
+
+    let claimId = encodeBase64(decodeUTF8(JSON.stringify({
+      'nonce': nonce,
+      'signature': signature,
+      'publicKey': publicKey
+    })))
+
+    this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'] }
+    this.storage[publicKey]['last'] = claimId
+
+    for (let subscriberWs of this.storage[publicKey].subscribers.concat(this.globalObservers)) {
+      let claim = this.storage[publicKey]['claims'][claimId]
+      subscriberWs.send(JSON.stringify({ 'claim': claim, 'ssid': { 'pubkey': publicKey } }), {}, (error) => {
+        if (error != null && !error.message.includes('WebSocket is not open')) {
+          console.log('Error while sending ws message: ' + error)
+        }
+      })
+    }
+
+    res.send(JSON.stringify(claimId))
   }
 
   lazyInitStorage (publicKey) {
@@ -63,8 +75,10 @@ class EphemeralServer {
   }
 
   get (req, res) {
-    let publicKey = req.body.publicKey
     let claimId = req.body.claimId
+    let publicKey = JSON.parse(encodeUTF8(decodeBase64(claimId))).publicKey
+
+
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
       res.send(this.storage[publicKey]['claims'][claimId])
     }
@@ -87,9 +101,9 @@ class EphemeralServer {
     this.globalObservers.push(ws)
   }
 
-  getMessageFromBody (body) {
-    if (body.signedMessage != null && body.publicKey != null) {
-      return JSON.parse(encodeUTF8(nacl.sign.open(decodeBase64(body.signedMessage), decodeBase64(body.publicKey))))
+  verifySignature (body) {
+    if (body.message != null && body.signature != null && body.publicKey != null) {
+      return nacl.sign.detached.verify(decodeBase64(body.message), decodeBase64(body.signature), decodeBase64(body.publicKey))
     }
   }
 

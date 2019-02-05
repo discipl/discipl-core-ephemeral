@@ -5,7 +5,6 @@ import { WebSocketSubject } from 'rxjs/webSocket'
 import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
 import { BaseConnector } from 'discipl-core-baseconnector'
 
-
 class EphemeralConnector extends BaseConnector {
   getName () {
     return 'ephemeral'
@@ -24,7 +23,7 @@ class EphemeralConnector extends BaseConnector {
   async getLatestClaim (ssid) {
     let response = await axios.post(this.serverEndpoint + '/getLatest', { 'publicKey': ssid.pubkey })
 
-    return encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': response.data, 'publicKey': ssid.pubkey })))
+    return response.data
   }
 
   async newSsid () {
@@ -34,25 +33,40 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async claim (ssid, data) {
-    let signedMessage = nacl.sign(decodeUTF8(JSON.stringify(data)), decodeBase64(ssid.privkey))
+    let message = decodeUTF8(JSON.stringify(data))
+    let signature = nacl.sign.detached(message, decodeBase64(ssid.privkey))
 
-    let signedMessageString = encodeBase64(signedMessage)
+    let claim = {
+      'message': encodeBase64(message),
+      'signature': encodeBase64(signature),
+      'publicKey': ssid.pubkey
+    }
 
-    let response = await axios.post(this.serverEndpoint + '/claim', { 'signedMessage': signedMessageString, 'publicKey': ssid.pubkey })
+    let response = await axios.post(this.serverEndpoint + '/claim', claim)
 
-    return encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': response.data, 'publicKey': ssid.pubkey })))
+    return response.data
   }
 
   async get (reference, ssid = null) {
-    let request = JSON.parse(encodeUTF8(decodeBase64(reference)))
-    let response = await axios.post(this.serverEndpoint + '/get', request)
+    let response = await axios.post(this.serverEndpoint + '/get', { 'claimId': reference })
 
+    let splitReference = JSON.parse(encodeUTF8(decodeBase64(reference)))
     let result = response.data
 
-    if (result.previous != null) {
-      result.previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': result.previous, 'publicKey': request.publicKey })))
-    }
+    result.data = this._verifySignature(result.data, splitReference.signature, splitReference.publicKey)
+
     return result
+  }
+
+  _verifySignature (data, signature, publicKey) {
+    if (data != null) {
+      let decodedData = decodeBase64(data)
+      if (nacl.sign.detached.verify(decodedData, decodeBase64(signature), decodeBase64(publicKey))) {
+        return JSON.parse(encodeUTF8(decodedData))
+      }
+    }
+
+    return null
   }
 
   async observe (ssid, claimFilter = {}) {
@@ -63,7 +77,10 @@ class EphemeralConnector extends BaseConnector {
       socket.next('GLOBAL')
     }
 
-    let processedSocked = socket.pipe(filter(claim => {
+    let processedSocked = socket.pipe(map(claim => {
+      claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.ssid.pubkey)
+      return claim
+    })).pipe(filter(claim => {
       if (claimFilter != null) {
         for (let predicate of Object.keys(claimFilter)) {
           if (claim['claim']['data'][predicate] == null) {
@@ -81,12 +98,7 @@ class EphemeralConnector extends BaseConnector {
       return ssid == null || claim.ssid.pubkey === ssid.pubkey
     })
     )
-      .pipe(map(claim => {
-        if (claim['claim'].previous != null) {
-          claim['claim'].previous = encodeBase64(decodeUTF8(JSON.stringify({ 'claimId': claim['claim'].previous, 'publicKey': claim['ssid']['pubkey'] })))
-        }
-        return claim
-      }))
+
     return processedSocked
   }
 }

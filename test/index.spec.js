@@ -55,7 +55,9 @@ describe('discipl-ephemeral-connector', () => {
 
     let claim = await ephemeralConnector.get(claimLink)
 
-    expect(claim).to.deep.equal({ 'data': { 'need': 'beer' }, 'previous': null })
+    expect(claim.data).to.deep.equal({ 'need': 'beer' })
+    expect(claim.previous).to.equal(null)
+    expect(claim.signature).to.be.a('string')
   })
 
   it('should be able to obtain a reference to the last claim', async () => {
@@ -90,12 +92,9 @@ describe('discipl-ephemeral-connector', () => {
 
     let wineClaim = await ephemeralConnector.get(wineLink)
 
-    expect(wineClaim).to.deep.equal({
-      'data': {
-        'need': 'wine'
-      },
-      'previous': beerLink
-    })
+    expect(wineClaim.data).to.deep.equal({ 'need': 'wine' })
+    expect(wineClaim.previous).to.equal(beerLink)
+    expect(wineClaim.signature).to.be.a('string')
   })
 
   it('should be able to get the ssid from a claim reference', async () => {
@@ -131,17 +130,10 @@ describe('discipl-ephemeral-connector', () => {
     expect(claimLink).to.be.a('string')
     let observed = await observer
 
-    expect(observed).to.deep.equal({
-      'claim': {
-        'data': {
-          'need': 'beer'
-        },
-        'previous': null
-      },
-      'ssid': {
-        'pubkey': ssid.pubkey
-      }
-    })
+    expect(observed.claim.data).to.deep.equal({ 'need': 'beer' })
+    expect(observed.claim.previous).to.equal(null)
+    expect(observed.claim.signature).to.be.a('string')
+    expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
   })
 
   it('should be able to observe connector-wide', async () => {
@@ -160,17 +152,10 @@ describe('discipl-ephemeral-connector', () => {
     expect(claimLink).to.be.a('string')
     let observed = await observer
 
-    expect(observed).to.deep.equal({
-      'claim': {
-        'data': {
-          'need': 'beer'
-        },
-        'previous': null
-      },
-      'ssid': {
-        'pubkey': ssid.pubkey
-      }
-    })
+    expect(observed.claim.data).to.deep.equal({ 'need': 'beer' })
+    expect(observed.claim.previous).to.equal(null)
+    expect(observed.claim.signature).to.be.a('string')
+    expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
   })
 
   it('should be able to claim something and listen to the connector with a filter', async () => {
@@ -189,17 +174,10 @@ describe('discipl-ephemeral-connector', () => {
     await ephemeralConnector.claim(ssid, { 'need': 'tea' })
     let observed = await observer
 
-    expect(observed).to.deep.equal({
-      'claim': {
-        'data': {
-          'need': 'wine'
-        },
-        'previous': claimLink
-      },
-      'ssid': {
-        'pubkey': ssid.pubkey
-      }
-    })
+    expect(observed.claim.data).to.deep.equal({ 'need': 'wine' })
+    expect(observed.claim.previous).to.equal(claimLink)
+    expect(observed.claim.signature).to.be.a('string')
+    expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
   })
 
   it('should be able to claim something and listen to the connector with a filter on a predicate', async () => {
@@ -218,17 +196,10 @@ describe('discipl-ephemeral-connector', () => {
     await ephemeralConnector.claim(ssid, { 'desire': 'tea' })
     let observed = await observer
 
-    expect(observed).to.deep.equal({
-      'claim': {
-        'data': {
-          'need': 'wine'
-        },
-        'previous': claimLink
-      },
-      'ssid': {
-        'pubkey': ssid.pubkey
-      }
-    })
+    expect(observed.claim.data).to.deep.equal({ 'need': 'wine' })
+    expect(observed.claim.previous).to.equal(claimLink)
+    expect(observed.claim.signature).to.be.a('string')
+    expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
   })
 
   it('should be able to claim something and listen to the connector with a filter on a predicate without an ssid', async () => {
@@ -247,16 +218,9 @@ describe('discipl-ephemeral-connector', () => {
     await ephemeralConnector.claim(ssid, { 'desire': 'tea' })
     let observed = await observer
 
-    expect(observed).to.deep.equal({
-      'claim': {
-        'data': {
-          'need': 'wine'
-        },
-        'previous': claimLink
-      },
-      'ssid': {
-        'pubkey': ssid.pubkey
-      }
-    })
+    expect(observed.claim.data).to.deep.equal({ 'need': 'wine' })
+    expect(observed.claim.previous).to.equal(claimLink)
+    expect(observed.claim.signature).to.be.a('string')
+    expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
   })
 })
