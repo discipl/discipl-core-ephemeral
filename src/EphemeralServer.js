@@ -47,11 +47,7 @@ class EphemeralServer {
   async claim (req, res) {
     let result = await this.storage.claim(req.body)
 
-    if (result == null) {
-      res.sendStatus(401)
-    } else {
-      res.send(JSON.stringify(result))
-    }
+    res.send(JSON.stringify(result))
   }
 
   async get (req, res) {
