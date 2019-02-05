@@ -2,6 +2,8 @@
 /* eslint-disable no-unused-expressions */
 
 import { expect } from 'chai'
+import sinon from 'sinon'
+import axios from 'axios'
 import EphemeralConnector from '../src/index'
 import { EphemeralServer } from '../src/server'
 import { take } from 'rxjs/operators'
@@ -35,6 +37,30 @@ describe('discipl-ephemeral-connector', () => {
       expect(ssid.pubkey.length).to.equal(44)
       expect(ssid.privkey).to.be.a('string')
       expect(ssid.privkey.length).to.equal(88)
+    })
+
+    it('should be able to detect wrong signatures when getting a claim', async () => {
+      let ephemeralConnector = new EphemeralConnector()
+      let axiosStub = sinon.stub(axios, 'post')
+      // Valid data would be eyJuZWVkIjoid2luZSJ9
+      axiosStub.returns({
+        data:
+          {
+            data: 'eyJuZWVkIjoiYmVlciJ9',
+            signature:
+              '31kUUURy79zjS/dzCAx3yFla4xd5JypallLSkfzreXk2ZcmMuMtLPpoc/p/yPMXuJmvnCntuYZy63i41k/IJBA==',
+            previous:
+              'eyJub25jZSI6IjZUWDYzWFlSMHVnU3JJOEN5VzU4SktaRW1YNmVmV3l2bi90UDkzT0lRaUE9Iiwic2lnbmF0dXJlIjoic1F3T0Y0SndOMndBVVBZZVFsRmRDTFJFc1d5WUdSY0JiQkxGbXhYUE5aOU82bzBwWmZ2bTA5NVNnTk5YeGN4N0k4RGpmaG9zNWxoMklzcEJpc3hFREE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0='
+          }
+      })
+
+      let claim = await ephemeralConnector.get('eyJub25jZSI6InN2TGlWVmRJVmJodmJPTW04VURESEhiUXNUR1BHazMzMDBXQ3N1UW5ncTA9Iiwic2lnbmF0dXJlIjoiMzFrVVVVUnk3OXpqUy9kekNBeDN5RmxhNHhkNUp5cGFsbExTa2Z6cmVYazJaY21NdU10TFBwb2MvcC95UE1YdUptdm5DbnR1WVp5NjNpNDFrL0lKQkE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0=')
+
+      // Restore stub for other tests
+      axiosStub.restore()
+
+      expect(claim).to.equal(null)
+
     })
   })
   describe('with a live server', () => {
