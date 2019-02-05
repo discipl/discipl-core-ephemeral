@@ -21,10 +21,6 @@ const timeoutPromise = (timeoutMillis) => {
   })
 }
 
-const getSignatureFromReference = (reference) => {
-  return JSON.parse(encodeUTF8(decodeBase64(reference))).signature
-}
-
 describe('discipl-ephemeral-connector', () => {
   describe('without a live server', () => {
     it('should present a name', async () => {
@@ -107,8 +103,7 @@ describe('discipl-ephemeral-connector', () => {
             'data': {
               'need': 'beer'
             },
-            'previous': null,
-            'signature': getSignatureFromReference(claimLink)
+            'previous': null
           })
         })
 
@@ -158,8 +153,7 @@ describe('discipl-ephemeral-connector', () => {
             'data': {
               'need': 'wine'
             },
-            'previous': beerLink,
-            'signature': getSignatureFromReference(wineLink)
+            'previous': beerLink
           })
         })
 
@@ -197,8 +191,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'beer'
               },
-              'previous': null,
-              'signature': getSignatureFromReference(claimLink)
+              'previous': null
             },
             'ssid': {
               'pubkey': ssid.pubkey
@@ -225,8 +218,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'beer'
               },
-              'previous': null,
-              'signature': getSignatureFromReference(claimLink)
+              'previous': null
             },
             'ssid': {
               'pubkey': ssid.pubkey
@@ -253,8 +245,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'wine'
               },
-              'previous': claimLink,
-              'signature': getSignatureFromReference(wineLink)
+              'previous': claimLink
             },
             'ssid': {
               'pubkey': ssid.pubkey
@@ -281,8 +272,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'wine'
               },
-              'previous': claimLink,
-              'signature': getSignatureFromReference(wineLink)
+              'previous': claimLink
             },
             'ssid': {
               'pubkey': ssid.pubkey
@@ -309,8 +299,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'wine'
               },
-              'previous': claimLink,
-              'signature': getSignatureFromReference(wineLink)
+              'previous': claimLink
             },
             'ssid': {
               'pubkey': ssid.pubkey

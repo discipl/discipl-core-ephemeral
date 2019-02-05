@@ -52,13 +52,16 @@ class EphemeralConnector extends BaseConnector {
 
     let splitReference = JSON.parse(encodeUTF8(decodeBase64(reference)))
 
-    result.data = this._verifySignature(result.data, splitReference.signature, splitReference.publicKey)
+    let data = this._verifySignature(result.data, splitReference.signature, splitReference.publicKey)
 
-    if (result.data == null) {
+    if (data == null) {
       return null
     }
 
-    return result
+    return {
+      'data': data,
+      'previous': result.previous
+    }
   }
 
   _verifySignature (data, signature, publicKey) {
@@ -78,6 +81,7 @@ class EphemeralConnector extends BaseConnector {
 
     let processedSubject = subject.pipe(map(claim => {
       claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.ssid.pubkey)
+      delete claim['claim'].signature
       return claim
     })).pipe(filter(claim => {
       if (claimFilter != null) {
