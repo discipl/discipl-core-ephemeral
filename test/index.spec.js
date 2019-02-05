@@ -8,7 +8,7 @@ import EphemeralConnector, { EphemeralServer } from '../src/index'
 import { take } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
-import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
+import { encodeUTF8, decodeBase64, encodeBase64 } from 'tweetnacl-util'
 
 let ephemeralServer
 
@@ -19,6 +19,10 @@ const timeoutPromise = (timeoutMillis) => {
   return new Promise(function (resolve, reject) {
     setTimeout(() => resolve(), timeoutMillis)
   })
+}
+
+const getSignatureFromReference = (reference) => {
+  return JSON.parse(encodeUTF8(decodeBase64(reference))).signature
 }
 
 describe('discipl-ephemeral-connector', () => {
@@ -99,9 +103,13 @@ describe('discipl-ephemeral-connector', () => {
 
           let claim = await ephemeralConnector.get(claimLink)
 
-          expect(claim.data).to.deep.equal({ 'need': 'beer' })
-          expect(claim.previous).to.equal(null)
-          expect(claim.signature).to.be.a('string')
+          expect(claim).to.deep.equal({
+            'data': {
+              'need': 'beer'
+            },
+            'previous': null,
+            'signature': getSignatureFromReference(claimLink)
+          })
         })
 
         it('should not be able to claim something with a wrong key', async () => {
@@ -146,9 +154,13 @@ describe('discipl-ephemeral-connector', () => {
 
           let wineClaim = await ephemeralConnector.get(wineLink)
 
-          expect(wineClaim.data).to.deep.equal({ 'need': 'wine' })
-          expect(wineClaim.previous).to.equal(beerLink)
-          expect(wineClaim.signature).to.be.a('string')
+          expect(wineClaim).to.deep.equal({
+            'data': {
+              'need': 'wine'
+            },
+            'previous': beerLink,
+            'signature': getSignatureFromReference(wineLink)
+          })
         })
 
         it('should be able to get the ssid from a claim reference', async () => {
@@ -180,10 +192,18 @@ describe('discipl-ephemeral-connector', () => {
           expect(claimLink).to.be.a('string')
           let observed = await observer
 
-          expect(observed.claim.data).to.deep.equal({ 'need': 'beer' })
-          expect(observed.claim.previous).to.equal(null)
-          expect(observed.claim.signature).to.be.a('string')
-          expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
+          expect(observed).to.deep.equal({
+            'claim': {
+              'data': {
+                'need': 'beer'
+              },
+              'previous': null,
+              'signature': getSignatureFromReference(claimLink)
+            },
+            'ssid': {
+              'pubkey': ssid.pubkey
+            }
+          })
         })
 
         it('should be able to observe connector-wide', async () => {
@@ -200,10 +220,19 @@ describe('discipl-ephemeral-connector', () => {
           expect(claimLink).to.be.a('string')
           let observed = await observer
 
-          expect(observed.claim.data).to.deep.equal({ 'need': 'beer' })
-          expect(observed.claim.previous).to.equal(null)
-          expect(observed.claim.signature).to.be.a('string')
-          expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
+
+          expect(observed).to.deep.equal({
+            'claim': {
+              'data': {
+                'need': 'beer'
+              },
+              'previous': null,
+              'signature': getSignatureFromReference(claimLink)
+            },
+            'ssid': {
+              'pubkey': ssid.pubkey
+            }
+          })
         })
 
         it('should be able to claim something and listen to the connector with a filter', async () => {
@@ -216,14 +245,23 @@ describe('discipl-ephemeral-connector', () => {
           await timeoutPromise(50)
 
           let claimLink = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
-          await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+          let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
           await ephemeralConnector.claim(ssid, { 'need': 'tea' })
           let observed = await observer
 
-          expect(observed.claim.data).to.deep.equal({ 'need': 'wine' })
-          expect(observed.claim.previous).to.equal(claimLink)
-          expect(observed.claim.signature).to.be.a('string')
-          expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
+
+          expect(observed).to.deep.equal({
+            'claim': {
+              'data': {
+                'need': 'wine'
+              },
+              'previous': claimLink,
+              'signature': getSignatureFromReference(wineLink)
+            },
+            'ssid': {
+              'pubkey': ssid.pubkey
+            }
+          })
         })
 
         it('should be able to claim something and listen to the connector with a filter on a predicate', async () => {
@@ -236,14 +274,22 @@ describe('discipl-ephemeral-connector', () => {
           await timeoutPromise(50)
 
           let claimLink = await ephemeralConnector.claim(ssid, { 'desire': 'beer' })
-          await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+          let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
           await ephemeralConnector.claim(ssid, { 'desire': 'tea' })
           let observed = await observer
 
-          expect(observed.claim.data).to.deep.equal({ 'need': 'wine' })
-          expect(observed.claim.previous).to.equal(claimLink)
-          expect(observed.claim.signature).to.be.a('string')
-          expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
+          expect(observed).to.deep.equal({
+            'claim': {
+              'data': {
+                'need': 'wine'
+              },
+              'previous': claimLink,
+              'signature': getSignatureFromReference(wineLink)
+            },
+            'ssid': {
+              'pubkey': ssid.pubkey
+            }
+          })
         })
 
         it('should be able to claim something and listen to the connector with a filter on a predicate without an ssid', async () => {
@@ -256,14 +302,22 @@ describe('discipl-ephemeral-connector', () => {
           await timeoutPromise(50)
 
           let claimLink = await ephemeralConnector.claim(ssid, { 'desire': 'beer' })
-          await ephemeralConnector.claim(ssid, { 'need': 'wine' })
+          let wineLink = await ephemeralConnector.claim(ssid, { 'need': 'wine' })
           await ephemeralConnector.claim(ssid, { 'desire': 'tea' })
           let observed = await observer
 
-          expect(observed.claim.data).to.deep.equal({ 'need': 'wine' })
-          expect(observed.claim.previous).to.equal(claimLink)
-          expect(observed.claim.signature).to.be.a('string')
-          expect(observed.ssid).to.deep.equal({ 'pubkey': ssid.pubkey })
+          expect(observed).to.deep.equal({
+            'claim': {
+              'data': {
+                'need': 'wine'
+              },
+              'previous': claimLink,
+              'signature': getSignatureFromReference(wineLink)
+            },
+            'ssid': {
+              'pubkey': ssid.pubkey
+            }
+          })
         })
       })
     })
