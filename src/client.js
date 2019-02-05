@@ -33,7 +33,8 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async claim (ssid, data) {
-    let message = decodeUTF8(JSON.stringify(data))
+    // Sort the keys to get the same message for the same data
+    let message = decodeUTF8(JSON.stringify(data, Object.keys(data).sort()))
     let signature = nacl.sign.detached(message, decodeBase64(ssid.privkey))
 
     let claim = {
