@@ -36,7 +36,7 @@ class EphemeralStorage {
     this.storage[publicKey]['last'] = claimId
 
     for (let observer of this.storage[publicKey].observers.concat(this.globalObservers)) {
-      let claim = this.storage[publicKey]['claims'][claimId]
+      let claim = Object.assign({}, this.storage[publicKey]['claims'][claimId])
       observer.next({ 'claim': claim, 'ssid': { 'pubkey': publicKey } })
     }
 
@@ -47,7 +47,7 @@ class EphemeralStorage {
     let publicKey = JSON.parse(encodeUTF8(decodeBase64(claimId))).publicKey
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
-      return this.storage[publicKey]['claims'][claimId]
+      return Object.assign({}, this.storage[publicKey]['claims'][claimId])
     }
   }
 
