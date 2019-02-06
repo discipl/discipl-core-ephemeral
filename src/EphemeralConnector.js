@@ -86,7 +86,7 @@ class EphemeralConnector extends BaseConnector {
 
   async import (ssid, reference, data) {
     let splitReference = JSON.parse(encodeUTF8(decodeBase64(reference)))
-    let message = decodeBase64(encodeBase64(decodeUTF8(JSON.stringify(data, Object.keys(data).sort()))))
+    let message = decodeBase64(encodeBase64(decodeUTF8(stringify(data))))
     let claim = {
       'message': encodeBase64(message),
       'signature': splitReference.signature,
