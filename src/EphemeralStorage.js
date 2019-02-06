@@ -1,6 +1,7 @@
 import { decodeBase64, decodeUTF8, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
 import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
+import stringify from 'json-stable-stringify'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -26,7 +27,7 @@ class EphemeralStorage {
 
     let nonce = encodeBase64(nacl.randomBytes(32))
 
-    let claimId = encodeBase64(decodeUTF8(JSON.stringify({
+    let claimId = encodeBase64(decodeUTF8(stringify({
       'nonce': nonce,
       'signature': signature,
       'publicKey': publicKey
