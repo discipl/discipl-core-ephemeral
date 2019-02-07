@@ -16,6 +16,7 @@
     "axios": "^0.18.0",
     "discipl-core-baseconnector": "git+https://github.com/discipl/discipl-core-baseconnector.git",
     "express": "^4.16.4",
+    "json-stable-stringify": "^1.0.1",
     "rxjs": "^6.3.3",
     "tweetnacl": "^1.0.0",
     "tweetnacl-util": "^0.15.0",

@@ -1,6 +1,7 @@
 import express from 'express'
 import ws from 'ws'
 import EphemeralStorage from './EphemeralStorage'
+import stringify from 'json-stable-stringify'
 
 /**
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
@@ -37,7 +38,7 @@ class EphemeralServer {
         }
 
         let observer = {
-          'next': (value) => ws.send(JSON.stringify(value), {}, errorCallback)
+          'next': (value) => ws.send(stringify(value), {}, errorCallback)
         }
 
         subject.subscribe(observer)
@@ -50,7 +51,7 @@ class EphemeralServer {
   async claim (req, res) {
     let result = await this.storage.claim(req.body)
 
-    res.send(JSON.stringify(result))
+    res.send(stringify(result))
   }
 
   async get (req, res) {

@@ -4,6 +4,7 @@ import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-ut
 import { BaseConnector } from 'discipl-core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
+import stringify from 'json-stable-stringify'
 
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
@@ -39,7 +40,7 @@ class EphemeralConnector extends BaseConnector {
 
   async claim (ssid, data) {
     // Sort the keys to get the same message for the same data
-    let message = decodeUTF8(JSON.stringify(data, Object.keys(data).sort()))
+    let message = decodeUTF8(stringify(data))
     let signature = nacl.sign.detached(message, decodeBase64(ssid.privkey))
 
     let claim = {
@@ -85,7 +86,7 @@ class EphemeralConnector extends BaseConnector {
 
   async import (ssid, reference, data) {
     let splitReference = JSON.parse(encodeUTF8(decodeBase64(reference)))
-    let message = decodeBase64(encodeBase64(decodeUTF8(JSON.stringify(data, Object.keys(data).sort()))))
+    let message = decodeBase64(encodeBase64(decodeUTF8(stringify(data))))
     let claim = {
       'message': encodeBase64(message),
       'signature': splitReference.signature,

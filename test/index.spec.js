@@ -107,6 +107,27 @@ describe('discipl-ephemeral-connector', () => {
           })
         })
 
+        it('should be able to claim something complicated', async () => {
+          let ephemeralConnector = backend.createConnector()
+
+          let ssid = await ephemeralConnector.newSsid()
+
+          let claimLink = await ephemeralConnector.claim(ssid, { 'need': { 'for': 'speed' } })
+
+          expect(claimLink).to.be.a('string')
+
+          let claim = await ephemeralConnector.get(claimLink)
+
+          expect(claim).to.deep.equal({
+            'data': {
+              'need': {
+                'for': 'speed'
+              }
+            },
+            'previous': null
+          })
+        })
+
         it('should not be able to claim something with a wrong key', async () => {
           let ephemeralConnector = backend.createConnector()
 
