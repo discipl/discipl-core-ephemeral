@@ -1,20 +1,29 @@
 {
-  "name": "discipl-core-ephemeral",
+  "name": "@discipl/core-ephemeral",
   "version": "0.0.1",
   "description": "Discipl Core Ephemeral Connector",
-  "main": "src/index.js",
+  "main": "dist/index.js",
+  "module": "src/index.js",
   "repository": "https://github.com/discipl/discipl-core-ephemeral",
   "author": "Bas Kaptijn",
   "license": "GPL-3.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "/src",
+    "/dist"
+  ],
   "scripts": {
-    "test": "nyc --reporter=html --reporter=text ./node_modules/.bin/mocha --require ./test/babel-register-helper.js ./test/**/*.spec.js",
+    "build": "babel src/ --out-dir dist",
+    "test": "nyc --reporter=html --reporter=text ./node_modules/.bin/mocha --require @babel/register ./test/**/*.spec.js",
     "lint": "./node_modules/standard/bin/cmd.js --parser babel-eslint",
     "lint-fix": "./node_modules/standard/bin/cmd.js --parser babel-eslint --fix",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && ./node_modules/codecov/bin/codecov"
   },
   "dependencies": {
+    "@discipl/core-baseconnector": "file:../../../packages/discipl-core-baseconnector-0.1.0.tgz",
     "axios": "^0.18.0",
-    "discipl-core-baseconnector": "git+https://github.com/discipl/discipl-core-baseconnector.git",
     "express": "^4.16.4",
     "json-stable-stringify": "^1.0.1",
     "rxjs": "^6.3.3",
@@ -23,6 +32,7 @@
     "ws": "^6.1.2"
   },
   "devDependencies": {
+    "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.2.0",
     "@babel/register": "^7.0.0",

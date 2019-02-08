@@ -1,7 +1,7 @@
 import nacl from 'tweetnacl/nacl-fast'
 import { filter, map } from 'rxjs/operators'
 import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
-import { BaseConnector } from 'discipl-core-baseconnector'
+import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
 import stringify from 'json-stable-stringify'
