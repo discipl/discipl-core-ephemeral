@@ -4,7 +4,8 @@
 import { expect } from 'chai'
 import sinon from 'sinon'
 import axios from 'axios'
-import EphemeralConnector, { EphemeralServer } from '../src/index'
+import EphemeralConnector from '../src/index'
+import EphemeralServer from '../src/EphemeralServer'
 import { take } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
