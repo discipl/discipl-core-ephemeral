@@ -221,7 +221,7 @@ describe('discipl-ephemeral-connector', () => {
           })
         })
 
-        it('should be able to import a claim using signature from reference', async () => {
+        it('should be able to import a claim using the signature from reference and importing it under same claim id', async () => {
           let ephemeralConnector = new EphemeralConnector()
           let ssid = await ephemeralConnector.newSsid()
           let reference = await ephemeralConnector.claim(ssid, { 'need': 'beer' })
@@ -234,6 +234,7 @@ describe('discipl-ephemeral-connector', () => {
           let result = await ephemeralConnector.import(ssid, reference, claim.data)
           c = await ephemeralConnector.get(result)
           expect(c.data).to.deep.equal({ 'need': 'beer' })
+          expect(reference).to.equal(result)
         })
 
         it('should be able to observe connector-wide', async () => {

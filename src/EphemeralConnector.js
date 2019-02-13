@@ -90,7 +90,8 @@ class EphemeralConnector extends BaseConnector {
     let claim = {
       'message': encodeBase64(message),
       'signature': splitReference.signature,
-      'publicKey': ssid.pubkey
+      'publicKey': ssid.pubkey,
+      'nonce': splitReference.nonce
     }
     return this.ephemeralClient.claim(claim)
   }
