@@ -21,11 +21,12 @@ class EphemeralStorage {
 
     let signature = claim.signature
     let message = claim.message
-
+    let nonce = claim.nonce
+    if (!(nonce)) {
+      nonce = encodeBase64(nacl.randomBytes(32))
+    }
     let publicKey = claim.publicKey
     this._lazyInitStorage(publicKey)
-
-    let nonce = encodeBase64(nacl.randomBytes(32))
 
     let claimId = encodeBase64(decodeUTF8(stringify({
       'nonce': nonce,
