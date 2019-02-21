@@ -28,6 +28,12 @@ class EphemeralClient {
     return response.data
   }
 
+  async getPublicKey (claimId) {
+    let response = await axios.post(this.serverEndpoint + '/getPublicKey', { 'claimId': claimId })
+
+    return response.data
+  }
+
   observe (publicKey = null) {
     let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': this.w3cwebsocket })
 

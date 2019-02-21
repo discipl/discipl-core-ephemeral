@@ -18,6 +18,7 @@ class EphemeralServer {
     app.post('/claim', (req, res) => this.claim(req, res))
     app.post('/get', (req, res) => this.get(req, res))
     app.post('/getLatest', (req, res) => this.getLatest(req, res))
+    app.post('/getPublicKey', (req, res) => this.getPublicKey(req, res))
 
     this.server = app.listen(this.port, () => console.log(`Ephemeral server listening on ${this.port}!`))
 
@@ -50,16 +51,21 @@ class EphemeralServer {
 
   async claim (req, res) {
     let result = await this.storage.claim(req.body)
-
     res.send(stringify(result))
   }
 
   async get (req, res) {
-    res.send(await this.storage.get(req.body.claimId))
+    let result = await this.storage.get(req.body.claimId)
+    res.send(result)
   }
 
   async getLatest (req, res) {
     res.send(await this.storage.getLatest(req.body.publicKey))
+  }
+
+  async getPublicKey (req, res) {
+    let result = await this.storage.getPublicKey(req.body.claimId)
+    res.send(result)
   }
 
   close () {
