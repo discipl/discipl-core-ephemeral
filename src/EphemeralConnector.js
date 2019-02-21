@@ -25,7 +25,7 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async getSsidOfClaim (reference) {
-    return { 'pubkey': JSON.parse(encodeUTF8(decodeBase64(reference))).publicKey }
+    return { 'pubkey': await this.ephemeralClient.getPublicKey(reference) }
   }
 
   async getLatestClaim (ssid) {
@@ -59,9 +59,9 @@ class EphemeralConnector extends BaseConnector {
       return null
     }
 
-    let splitReference = JSON.parse(encodeUTF8(decodeBase64(reference)))
+    let publicKey = await this.ephemeralClient.getPublicKey(reference)
 
-    let data = this._verifySignature(result.data, splitReference.signature, splitReference.publicKey)
+    let data = this._verifySignature(result.data, reference, publicKey)
 
     if (data == null) {
       return null
@@ -85,13 +85,11 @@ class EphemeralConnector extends BaseConnector {
   }
 
   async import (ssid, reference, data) {
-    let splitReference = JSON.parse(encodeUTF8(decodeBase64(reference)))
-    let message = decodeBase64(encodeBase64(decodeUTF8(stringify(data))))
+    let message = encodeBase64(decodeUTF8(stringify(data)))
     let claim = {
-      'message': encodeBase64(message),
-      'signature': splitReference.signature,
-      'publicKey': ssid.pubkey,
-      'nonce': splitReference.nonce
+      'message': message,
+      'signature': reference,
+      'publicKey': ssid.pubkey
     }
     return this.ephemeralClient.claim(claim)
   }

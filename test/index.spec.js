@@ -43,15 +43,16 @@ describe('discipl-ephemeral-connector', () => {
       let ephemeralConnector = new EphemeralConnector()
       ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
       let axiosStub = sinon.stub(axios, 'post')
+      axiosStub.onFirstCall().returns({ data: '10F4oC/OrXA5cti7AfIZNo11F4zJGg1Kt05UUF6gMjU=' })
       // Valid data would be eyJuZWVkIjoid2luZSJ9
-      axiosStub.returns({
+      axiosStub.onSecondCall().returns({
         data:
           {
-            data: 'eyJuZWVkIjoiYmVlciJ9',
+            data: 'eyJuZWVkIjoidGVhIn0=',
             signature:
-              '31kUUURy79zjS/dzCAx3yFla4xd5JypallLSkfzreXk2ZcmMuMtLPpoc/p/yPMXuJmvnCntuYZy63i41k/IJBA==',
+              'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
             previous:
-              'eyJub25jZSI6IjZUWDYzWFlSMHVnU3JJOEN5VzU4SktaRW1YNmVmV3l2bi90UDkzT0lRaUE9Iiwic2lnbmF0dXJlIjoic1F3T0Y0SndOMndBVVBZZVFsRmRDTFJFc1d5WUdSY0JiQkxGbXhYUE5aOU82bzBwWmZ2bTA5NVNnTk5YeGN4N0k4RGpmaG9zNWxoMklzcEJpc3hFREE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0='
+              'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
           }
       })
 

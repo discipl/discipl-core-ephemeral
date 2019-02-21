@@ -1,7 +1,6 @@
-import { decodeBase64, decodeUTF8, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
+import { decodeBase64 } from 'tweetnacl-util'
 import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
-import stringify from 'json-stable-stringify'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -9,6 +8,7 @@ import stringify from 'json-stable-stringify'
 class EphemeralStorage {
   constructor () {
     this.storage = {}
+    this.claimOwners = {}
     this.globalObservers = []
   }
 
@@ -21,19 +21,13 @@ class EphemeralStorage {
 
     let signature = claim.signature
     let message = claim.message
-    let nonce = claim.nonce
-    if (!(nonce)) {
-      nonce = encodeBase64(nacl.randomBytes(32))
-    }
+
     let publicKey = claim.publicKey
     this._lazyInitStorage(publicKey)
 
-    let claimId = encodeBase64(decodeUTF8(stringify({
-      'nonce': nonce,
-      'signature': signature,
-      'publicKey': publicKey
-    })))
+    let claimId = signature
 
+    this.claimOwners[claimId] = publicKey
     this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'] }
     this.storage[publicKey]['last'] = claimId
 
@@ -46,7 +40,7 @@ class EphemeralStorage {
   }
 
   async get (claimId) {
-    let publicKey = JSON.parse(encodeUTF8(decodeBase64(claimId))).publicKey
+    let publicKey = this.claimOwners[claimId]
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
       return Object.assign({}, this.storage[publicKey]['claims'][claimId])
@@ -57,6 +51,10 @@ class EphemeralStorage {
     if (Object.keys(this.storage).includes(publicKey) && this.storage[publicKey]['last'] != null) {
       return this.storage[publicKey]['last']
     }
+  }
+
+  async getPublicKey (claimId) {
+    return this.claimOwners[claimId]
   }
 
   observe (publicKey = null) {
