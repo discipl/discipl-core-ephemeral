@@ -1,7 +1,6 @@
-import { decodeBase64, decodeUTF8, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
+import { decodeBase64 } from 'tweetnacl-util'
 import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
-import stringify from 'json-stable-stringify'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.

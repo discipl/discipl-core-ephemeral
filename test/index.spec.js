@@ -43,7 +43,7 @@ describe('discipl-ephemeral-connector', () => {
       let ephemeralConnector = new EphemeralConnector()
       ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
       let axiosStub = sinon.stub(axios, 'post')
-      axiosStub.onFirstCall().returns({data: '10F4oC/OrXA5cti7AfIZNo11F4zJGg1Kt05UUF6gMjU='})
+      axiosStub.onFirstCall().returns({ data: '10F4oC/OrXA5cti7AfIZNo11F4zJGg1Kt05UUF6gMjU=' })
       // Valid data would be eyJuZWVkIjoid2luZSJ9
       axiosStub.onSecondCall().returns({
         data:
