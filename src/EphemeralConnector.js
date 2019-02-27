@@ -24,35 +24,37 @@ class EphemeralConnector extends BaseConnector {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
   }
 
-  async getSsidOfClaim (reference) {
-    return { 'pubkey': await this.ephemeralClient.getPublicKey(reference) }
+  async getDidOfClaim (link) {
+    let reference = BaseConnector.referenceFromLink(link)
+    return this.didFromReference(await this.ephemeralClient.getPublicKey(reference))
   }
 
-  async getLatestClaim (ssid) {
-    return this.ephemeralClient.getLatest(ssid.pubkey)
+  async getLatestClaim (did) {
+    return this.linkFromReference(await this.ephemeralClient.getLatest(BaseConnector.referenceFromDid(did)))
   }
 
-  async newSsid () {
+  async newIdentity () {
     let keypair = nacl.sign.keyPair()
 
-    return { 'pubkey': encodeBase64(keypair.publicKey), 'privkey': encodeBase64(keypair.secretKey) }
+    return { 'did': this.didFromReference(encodeBase64(keypair.publicKey)), 'privkey': encodeBase64(keypair.secretKey) }
   }
 
-  async claim (ssid, data) {
+  async claim (did, privkey, data) {
     // Sort the keys to get the same message for the same data
     let message = decodeUTF8(stringify(data))
-    let signature = nacl.sign.detached(message, decodeBase64(ssid.privkey))
+    let signature = nacl.sign.detached(message, decodeBase64(privkey))
 
     let claim = {
       'message': encodeBase64(message),
       'signature': encodeBase64(signature),
-      'publicKey': ssid.pubkey
+      'publicKey': BaseConnector.referenceFromDid(did)
     }
 
-    return this.ephemeralClient.claim(claim)
+    return this.linkFromReference(await this.ephemeralClient.claim(claim))
   }
 
-  async get (reference, ssid = null) {
+  async get (link, ssid = null) {
+    let reference = BaseConnector.referenceFromLink(link)
     let result = await this.ephemeralClient.get(reference)
 
     if (!(result) || !(result.data)) {
@@ -69,7 +71,7 @@ class EphemeralConnector extends BaseConnector {
 
     return {
       'data': data,
-      'previous': result.previous
+      'previous': this.linkFromReference(result.previous)
     }
   }
 
@@ -84,24 +86,30 @@ class EphemeralConnector extends BaseConnector {
     return null
   }
 
-  async import (ssid, reference, data) {
+  async import (did, link, data) {
     let message = encodeBase64(decodeUTF8(stringify(data)))
     let claim = {
       'message': message,
-      'signature': reference,
-      'publicKey': ssid.pubkey
+      'signature': BaseConnector.referenceFromLink(link),
+      'publicKey': BaseConnector.referenceFromDid(did)
     }
-    return this.ephemeralClient.claim(claim)
+    return this.linkFromReference(await this.ephemeralClient.claim(claim))
   }
 
-  async observe (ssid, claimFilter = {}) {
-    let pubkey = ssid ? ssid.pubkey : null
+  async observe (did, claimFilter = {}) {
+    let pubkey = did == null ? null : BaseConnector.referenceFromDid(did)
     let subject = this.ephemeralClient.observe(pubkey)
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(map(claim => {
-      claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.ssid.pubkey)
+      claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.pubkey)
+      if (claim['claim'].previous) {
+        claim['claim'].previous = this.linkFromReference(claim['claim'].previous)
+      }
+
       delete claim['claim'].signature
+      claim['did'] = this.didFromReference(claim['pubkey'])
+      delete claim['pubkey']
       return claim
     })).pipe(filter(claim => {
       if (claimFilter != null) {
@@ -118,7 +126,7 @@ class EphemeralConnector extends BaseConnector {
         }
       }
 
-      return ssid == null || claim.ssid.pubkey === ssid.pubkey
+      return did == null || claim.did === did
     })
     )
 

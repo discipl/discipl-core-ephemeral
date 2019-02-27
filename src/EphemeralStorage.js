@@ -33,7 +33,7 @@ class EphemeralStorage {
 
     for (let observer of this.storage[publicKey].observers.concat(this.globalObservers)) {
       let claim = Object.assign({}, this.storage[publicKey]['claims'][claimId])
-      observer.next({ 'claim': claim, 'ssid': { 'pubkey': publicKey } })
+      observer.next({ 'claim': claim, 'pubkey': publicKey })
     }
 
     return claimId
