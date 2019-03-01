@@ -164,6 +164,8 @@ describe('discipl-ephemeral-connector', () => {
             },
             'previous': null
           })
+
+          expect(claimLink).to.equal(claimLink2)
         })
 
         it('should be able to claim something complicated', async () => {
