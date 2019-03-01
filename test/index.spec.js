@@ -16,7 +16,6 @@ let ephemeralServer
 const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
 const EPHEMERAL_WEBSOCKET_ENDPOINT = 'ws://localhost:3233'
 
-
 describe('discipl-ephemeral-connector', () => {
   describe('without a live server', () => {
     it('should present a name', async () => {
@@ -294,15 +293,15 @@ describe('discipl-ephemeral-connector', () => {
             },
             'did': identity.did
           },
-            {
-              'claim': {
-                'data': {
-                  'need': 'wine'
-                },
-                'previous': claimLink
+          {
+            'claim': {
+              'data': {
+                'need': 'wine'
               },
-              'did': identity.did
-            }
+              'previous': claimLink
+            },
+            'did': identity.did
+          }
           ])
         })
 
