@@ -22,27 +22,27 @@
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && ./node_modules/codecov/bin/codecov"
   },
   "dependencies": {
-    "@discipl/core-baseconnector": "file:../../../packages/discipl-core-baseconnector-0.1.0.tgz",
+    "@discipl/core-baseconnector": "file:../../../packages/discipl-core-baseconnector-0.2.0.tgz",
     "axios": "^0.18.0",
     "express": "^4.16.4",
     "json-stable-stringify": "^1.0.1",
-    "rxjs": "^6.3.3",
-    "tweetnacl": "^1.0.0",
+    "rxjs": "^6.4.0",
+    "tweetnacl": "^1.0.1",
     "tweetnacl-util": "^0.15.0",
-    "ws": "^6.1.2"
+    "ws": "^6.1.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
-    "@babel/core": "^7.2.2",
-    "@babel/preset-env": "^7.2.0",
+    "@babel/core": "^7.3.4",
+    "@babel/preset-env": "^7.3.4",
     "@babel/register": "^7.0.0",
     "babel-eslint": "^10.0.1",
     "chai": "^4.2.0",
-    "codecov": "^3.1.0",
-    "eslint": "^5.11.1",
+    "codecov": "^3.2.0",
+    "eslint": "^5.14.1",
     "mocha": "^5.2.0",
-    "nyc": "^13.1.0",
-    "sinon": "^7.2.2",
+    "nyc": "^13.3.0",
+    "sinon": "^7.2.5",
     "standard": "^12.0.1",
     "websocket": "^1.0.28"
   }
