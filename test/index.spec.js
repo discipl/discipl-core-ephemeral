@@ -6,7 +6,7 @@ import sinon from 'sinon'
 import axios from 'axios'
 import EphemeralConnector from '../src/index'
 import EphemeralServer from '../src/EphemeralServer'
-import { take } from 'rxjs/operators'
+import { take, toArray } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
 import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
@@ -102,6 +102,63 @@ describe('discipl-ephemeral-connector', () => {
           let claim = await ephemeralConnector.get(claimLink)
 
           expect(claim).to.deep.equal({
+            'data': {
+              'need': 'beer'
+            },
+            'previous': null
+          })
+        })
+
+        it('should be able to claim multiple things', async () => {
+          let ephemeralConnector = backend.createConnector()
+
+          let identity = await ephemeralConnector.newIdentity()
+
+          let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+          let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
+          expect(claimLink).to.be.a('string')
+
+          let claim = await ephemeralConnector.get(claimLink)
+
+          expect(claim).to.deep.equal({
+            'data': {
+              'need': 'beer'
+            },
+            'previous': null
+          })
+
+          let claim2 = await ephemeralConnector.get(claimLink2)
+
+          expect(claim2).to.deep.equal({
+            'data': {
+              'need': 'wine'
+            },
+            'previous': claimLink
+          })
+        })
+
+        it('should be stable if the same thing is claimed twice', async () => {
+          let ephemeralConnector = backend.createConnector()
+
+          let identity = await ephemeralConnector.newIdentity()
+
+          let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+
+          expect(claimLink).to.be.a('string')
+
+          let claim = await ephemeralConnector.get(claimLink)
+
+          expect(claim).to.deep.equal({
+            'data': {
+              'need': 'beer'
+            },
+            'previous': null
+          })
+
+          let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+          let claim2 = await ephemeralConnector.get(claimLink2)
+
+          expect(claim2).to.deep.equal({
             'data': {
               'need': 'beer'
             },
@@ -218,6 +275,42 @@ describe('discipl-ephemeral-connector', () => {
             },
             'did': identity.did
           })
+        })
+
+        it('should be able to claim something and listen to the connector to get multiple claims', async () => {
+          let ephemeralConnector = backend.createConnector()
+
+          let identity = await ephemeralConnector.newIdentity()
+          let observable = await ephemeralConnector.observe(identity.did)
+          let observer = observable.pipe(take(2)).pipe(toArray()).toPromise()
+          // TODO: Fix race conditions
+          await timeoutPromise(50)
+
+          let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+          let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
+          expect(claimLink).to.be.a('string')
+          expect(claimLink2).to.be.a('string')
+          let observed = await observer
+
+          expect(observed).to.deep.equal([{
+            'claim': {
+              'data': {
+                'need': 'beer'
+              },
+              'previous': null
+            },
+            'did': identity.did
+          },
+            {
+              'claim': {
+                'data': {
+                  'need': 'wine'
+                },
+                'previous': claimLink
+              },
+              'did': identity.did
+            }
+          ])
         })
 
         it('should be able to import a claim using the signature from reference and importing it under same claim id', async () => {

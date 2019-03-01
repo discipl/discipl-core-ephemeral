@@ -27,6 +27,10 @@ class EphemeralStorage {
 
     let claimId = signature
 
+    if (Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
+      return claimId
+    }
+
     this.claimOwners[claimId] = publicKey
     this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'] }
     this.storage[publicKey]['last'] = claimId
