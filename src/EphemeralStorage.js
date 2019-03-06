@@ -62,20 +62,23 @@ class EphemeralStorage {
         'signature': sourceClaim.signature,
         'previous': sourceClaim.previous
       }
-      listener.subject.next({ 'claim': claim, 'pubkey': publicKey })
+
+      if (this._hasAccessTo(claimId, listener.owner)) {
+        listener.subject.next({ 'claim': claim, 'pubkey': publicKey })
+      }
     }
 
     return claimId
   }
 
-  hasAccessTo (claimId, pubkey) {
+  _hasAccessTo (claimId, pubkey) {
     let claimPublicKey = this.claimOwners[claimId]
 
     if (claimPublicKey == null) {
       return false
     }
 
-    for (let accessObject in [this.storage[claimPublicKey]['access'], this.storage[claimPublicKey]['claims'][claimId]['access']]) {
+    for (let accessObject of [this.storage[claimPublicKey]['access'], this.storage[claimPublicKey]['claims'][claimId]['access']]) {
       if (accessObject === true) {
         return true
       } else {
@@ -88,7 +91,7 @@ class EphemeralStorage {
     return false
   }
 
-  async get (claimId) {
+  async get (claimId, sourcePubkey) {
     let publicKey = this.claimOwners[claimId]
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
@@ -98,7 +101,9 @@ class EphemeralStorage {
         'signature': sourceClaim.signature,
         'previous': sourceClaim.previous
       }
-      return claim
+      if (this._hasAccessTo(claimId, sourcePubkey)) {
+        return claim
+      }
     }
   }
 

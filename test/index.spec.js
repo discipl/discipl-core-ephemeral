@@ -6,10 +6,11 @@ import sinon from 'sinon'
 import axios from 'axios'
 import EphemeralConnector from '../src/index'
 import EphemeralServer from '../src/EphemeralServer'
-import { take, toArray } from 'rxjs/operators'
+import { skip, take, toArray, last } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
 import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
+import { BaseConnector } from '@discipl/core-baseconnector'
 
 let ephemeralServer
 
@@ -91,6 +92,8 @@ describe('discipl-ephemeral-connector', () => {
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
           expect(claimLink).to.be.a('string')
 
           let claim = await ephemeralConnector.get(claimLink)
@@ -111,6 +114,8 @@ describe('discipl-ephemeral-connector', () => {
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
           expect(claimLink).to.be.a('string')
+
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claim = await ephemeralConnector.get(claimLink)
 
@@ -139,6 +144,8 @@ describe('discipl-ephemeral-connector', () => {
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
           expect(claimLink).to.be.a('string')
+
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claim = await ephemeralConnector.get(claimLink)
 
@@ -171,6 +178,8 @@ describe('discipl-ephemeral-connector', () => {
 
           expect(claimLink).to.be.a('string')
 
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
           let claim = await ephemeralConnector.get(claimLink)
 
           expect(claim).to.deep.equal({
@@ -202,6 +211,8 @@ describe('discipl-ephemeral-connector', () => {
 
           let identity = await ephemeralConnector.newIdentity()
 
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
           expect(claimLink).to.be.a('string')
@@ -216,8 +227,11 @@ describe('discipl-ephemeral-connector', () => {
 
           let identity = await ephemeralConnector.newIdentity()
 
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
           let beerLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let wineLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
+
 
           let latestClaimLink = await ephemeralConnector.getLatestClaim(identity.did)
 
@@ -242,6 +256,8 @@ describe('discipl-ephemeral-connector', () => {
 
           expect(claimLink).to.be.a('string')
 
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
           let claimLinkDid = await ephemeralConnector.getDidOfClaim(claimLink)
 
           expect(claimLinkDid).to.be.a('string')
@@ -253,7 +269,9 @@ describe('discipl-ephemeral-connector', () => {
 
           let identity = await ephemeralConnector.newIdentity()
           let observable = await ephemeralConnector.observe(identity.did)
-          let observer = observable.pipe(take(1)).toPromise()
+          let observer = observable.pipe(skip(1)).pipe(take(1)).toPromise()
+
+          let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
@@ -265,7 +283,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'beer'
               },
-              'previous': null
+              'previous': accessClaimLink
             },
             'did': identity.did
           })
@@ -276,7 +294,9 @@ describe('discipl-ephemeral-connector', () => {
 
           let identity = await ephemeralConnector.newIdentity()
           let observable = await ephemeralConnector.observe(identity.did)
-          let observer = observable.pipe(take(2)).pipe(toArray()).toPromise()
+          let observer = observable.pipe(skip(1)).pipe(take(2)).pipe(toArray()).toPromise()
+
+          let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
@@ -289,7 +309,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'beer'
               },
-              'previous': null
+              'previous': accessClaimLink
             },
             'did': identity.did
           },
@@ -309,6 +329,10 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = new EphemeralConnector()
           let identity = await ephemeralConnector.newIdentity()
           let reference = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
+
           let claim = await ephemeralConnector.get(reference)
           expect(claim.data).to.deep.equal({ 'need': 'beer' })
 
@@ -329,6 +353,8 @@ describe('discipl-ephemeral-connector', () => {
           let observable = await ephemeralConnector.observe(null, { 'need': 'beer' })
           let observer = observable.pipe(take(1)).toPromise()
 
+          let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
           expect(claimLink).to.be.a('string')
@@ -339,7 +365,7 @@ describe('discipl-ephemeral-connector', () => {
               'data': {
                 'need': 'beer'
               },
-              'previous': null
+              'previous': accessClaimLink
             },
             'did': identity.did
           })
@@ -351,6 +377,8 @@ describe('discipl-ephemeral-connector', () => {
           let identity = await ephemeralConnector.newIdentity()
           let observable = await ephemeralConnector.observe(identity.did, { 'need': 'wine' })
           let observer = observable.pipe(take(1)).toPromise()
+
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
@@ -375,6 +403,8 @@ describe('discipl-ephemeral-connector', () => {
           let observable = await ephemeralConnector.observe(identity.did, { 'need': null })
           let observer = observable.pipe(take(1)).toPromise()
 
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'desire': 'beer' })
           await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
           await ephemeralConnector.claim(identity.did, identity.privkey, { 'desire': 'tea' })
@@ -397,6 +427,8 @@ describe('discipl-ephemeral-connector', () => {
           let identity = await ephemeralConnector.newIdentity()
           let observable = await ephemeralConnector.observe(null, { 'need': null })
           let observer = observable.pipe(take(1)).toPromise()
+
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'desire': 'beer' })
           await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
