@@ -49,24 +49,43 @@ class EphemeralStorage {
       } else {
         if (object['access'] !== true) {
           if (BaseConnector.isDid(access.did)) {
-            object['access'].push(access.did)
+            object['access'].push(BaseConnector.referenceFromDid(access.did))
           }
         }
       }
-
     }
 
-    for (let observer of this.storage[publicKey].observers.concat(this.globalObservers)) {
+    for (let listener of this.storage[publicKey].observers.concat(this.globalObservers)) {
       let sourceClaim = this.storage[publicKey]['claims'][claimId]
       let claim = {
         'data': sourceClaim.data,
         'signature': sourceClaim.signature,
         'previous': sourceClaim.previous
       }
-      observer.next({ 'claim': claim, 'pubkey': publicKey })
+      listener.subject.next({ 'claim': claim, 'pubkey': publicKey })
     }
 
     return claimId
+  }
+
+  hasAccessTo (claimId, pubkey) {
+    let claimPublicKey = this.claimOwners[claimId]
+
+    if (claimPublicKey == null) {
+      return false
+    }
+
+    for (let accessObject in [this.storage[claimPublicKey]['access'], this.storage[claimPublicKey]['claims'][claimId]['access']]) {
+      if (accessObject === true) {
+        return true
+      } else {
+        if (accessObject.includes(pubkey)) {
+          return true
+        }
+      }
+    }
+
+    return false
   }
 
   async get (claimId) {
@@ -93,14 +112,18 @@ class EphemeralStorage {
     return this.claimOwners[claimId]
   }
 
-  observe (publicKey = null) {
+  observe (publicKey = null, sourcePubkey = null) {
     let subject = new Subject()
+    let listener = {
+      'subject': subject,
+      'owner': sourcePubkey
+    }
     if (publicKey !== null) {
       this._lazyInitStorage(publicKey)
 
-      this.storage[publicKey].observers.push(subject)
+      this.storage[publicKey].observers.push(listener)
     } else {
-      this.globalObservers.push(subject)
+      this.globalObservers.push(listener)
     }
 
     return subject
