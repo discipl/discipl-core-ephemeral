@@ -27,13 +27,17 @@ class EphemeralStorage {
 
     let claimId = signature
 
+    if (Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
+      return claimId
+    }
+
     this.claimOwners[claimId] = publicKey
     this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'] }
     this.storage[publicKey]['last'] = claimId
 
     for (let observer of this.storage[publicKey].observers.concat(this.globalObservers)) {
       let claim = Object.assign({}, this.storage[publicKey]['claims'][claimId])
-      observer.next({ 'claim': claim, 'ssid': { 'pubkey': publicKey } })
+      observer.next({ 'claim': claim, 'pubkey': publicKey })
     }
 
     return claimId

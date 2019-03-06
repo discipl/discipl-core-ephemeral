@@ -1,6 +1,6 @@
 import nacl from 'tweetnacl/nacl-fast'
 import { filter, map } from 'rxjs/operators'
-import { encodeBase64, decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
+import { decodeBase64, decodeUTF8, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
@@ -16,43 +16,98 @@ class EphemeralConnector extends BaseConnector {
     this.ephemeralClient = new EphemeralStorage()
   }
 
+  /**
+   *  Returns the name of this connector. Mainly used in did and link constructions.
+   *
+   * @returns {string} The string 'ephemeral'.
+   */
   getName () {
     return 'ephemeral'
   }
 
+  /**
+   * Configures the connector. If this function is called, it will connect to an instance of EphemeralServer.
+   * If not, it will use an in-memory backend.
+   *
+   * @param {string} serverEndpoint - EphemeralServer endpoint for http calls
+   * @param {string} websocketEndpoint - EphemeralServer endpoint for websocket connections
+   * @param {object} w3cwebsocket - W3C compatible WebSocket implementation. In the browser, this is window.WebSocket.
+   * For node.js, the `websocket` npm package provides a compatible implementation.
+   */
   configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
   }
 
-  async getSsidOfClaim (reference) {
-    return { 'pubkey': await this.ephemeralClient.getPublicKey(reference) }
+  /**
+   * Looks up the corresponding did for a particular claim.
+   *
+   * This information is saved in the backing memory on calls to claim (either directly, or indirectly through import)
+   *
+   * @param {string} link - Link to the claim
+   * @returns {Promise<string>} Did that made this claim
+   */
+  async getDidOfClaim (link) {
+    let reference = BaseConnector.referenceFromLink(link)
+    return this.didFromReference(await this.ephemeralClient.getPublicKey(reference))
   }
 
-  async getLatestClaim (ssid) {
-    return this.ephemeralClient.getLatest(ssid.pubkey)
+  /**
+   * Returns a link to the last claim made by this did
+   *
+   * @param {string} did
+   * @returns {Promise<string>} Link to the last claim made by this did
+   */
+  async getLatestClaim (did) {
+    return this.linkFromReference(await this.ephemeralClient.getLatest(BaseConnector.referenceFromDid(did)))
   }
 
-  async newSsid () {
+  /**
+   * Generates a new ephemeral identity, backed by a keypair generated with tweetnacl.
+   *
+   * @returns {Promise<{privkey: string, did: string}>} ssid-object, containing both the did and the authentication mechanism.
+   */
+  async newIdentity () {
     let keypair = nacl.sign.keyPair()
 
-    return { 'pubkey': encodeBase64(keypair.publicKey), 'privkey': encodeBase64(keypair.secretKey) }
+    return { 'did': this.didFromReference(encodeBase64(keypair.publicKey)), 'privkey': encodeBase64(keypair.secretKey) }
   }
 
-  async claim (ssid, data) {
+  /**
+   * Expresses a claim
+   *
+   * The data will be serialized using a stable stringify that only depends on the actual data being claimed,
+   * and not on the order of insertion of attributes.
+   * If the exact claim has been made before, this will return the existing link, but not recreate the claim.
+   *
+   * @param {string} did - Identity that expresses the claim
+   * @param {string} privkey - Base64 encoded authentication mechanism
+   * @param {object} data - Arbitrary object that constitutes the data being claimed.
+   * @returns {Promise<string>} link - Link to the produced claim
+   */
+  async claim (did, privkey, data) {
     // Sort the keys to get the same message for the same data
     let message = decodeUTF8(stringify(data))
-    let signature = nacl.sign.detached(message, decodeBase64(ssid.privkey))
+    let signature = nacl.sign.detached(message, decodeBase64(privkey))
 
     let claim = {
       'message': encodeBase64(message),
       'signature': encodeBase64(signature),
-      'publicKey': ssid.pubkey
+      'publicKey': BaseConnector.referenceFromDid(did)
     }
 
-    return this.ephemeralClient.claim(claim)
+    return this.linkFromReference(await this.ephemeralClient.claim(claim))
   }
 
-  async get (reference, ssid = null) {
+  /**
+   * Retrieve a claim by its link
+   *
+   * @param {string} link - Link to the claim
+   * @param {object} ssid - Identity object for authorization. Currently unused.
+   * @returns {Promise<{data: object, previous: string}>} Object containing the data of the claim and a link to the
+   * claim before it.
+   */
+  async get (link, ssid = null) {
+    let reference = BaseConnector.referenceFromLink(link)
     let result = await this.ephemeralClient.get(reference)
 
     if (!(result) || !(result.data)) {
@@ -69,7 +124,7 @@ class EphemeralConnector extends BaseConnector {
 
     return {
       'data': data,
-      'previous': result.previous
+      'previous': this.linkFromReference(result.previous)
     }
   }
 
@@ -84,24 +139,47 @@ class EphemeralConnector extends BaseConnector {
     return null
   }
 
-  async import (ssid, reference, data) {
+  /**
+   * Imports a claim that was exported from another ephemeral connector.
+   *
+   * This needs the signature on it, in the form of the link. The signature is verfied when using this method.
+   *
+   * @param {string} did - Did that originally made this claim
+   * @param {string} link - Link to the claim, which contains the signature over the data
+   * @param {object} data - Data in the original claim
+   * @returns {Promise<string>} - Link to the claim if successfully imported, null otherwise.
+   */
+  async import (did, link, data) {
     let message = encodeBase64(decodeUTF8(stringify(data)))
     let claim = {
       'message': message,
-      'signature': reference,
-      'publicKey': ssid.pubkey
+      'signature': BaseConnector.referenceFromLink(link),
+      'publicKey': BaseConnector.referenceFromDid(did)
     }
-    return this.ephemeralClient.claim(claim)
+    return this.linkFromReference(await this.ephemeralClient.claim(claim))
   }
 
-  async observe (ssid, claimFilter = {}) {
-    let pubkey = ssid ? ssid.pubkey : null
+  /**
+   * Observe claims being made in the connector
+   *
+   * @param {string} did - Only observe claims from this did
+   * @param {object} claimFilter - Only observe claims that contain this data. If a value is null, claims with the key will be observed.
+   * @returns {Promise<Observable<{claim: {data: object, previous: string}, did: string}>>}
+   */
+  async observe (did, claimFilter = {}) {
+    let pubkey = did == null ? null : BaseConnector.referenceFromDid(did)
     let subject = this.ephemeralClient.observe(pubkey)
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(map(claim => {
-      claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.ssid.pubkey)
+      claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.pubkey)
+      if (claim['claim'].previous) {
+        claim['claim'].previous = this.linkFromReference(claim['claim'].previous)
+      }
+
       delete claim['claim'].signature
+      claim['did'] = this.didFromReference(claim['pubkey'])
+      delete claim['pubkey']
       return claim
     })).pipe(filter(claim => {
       if (claimFilter != null) {
@@ -118,7 +196,7 @@ class EphemeralConnector extends BaseConnector {
         }
       }
 
-      return ssid == null || claim.ssid.pubkey === ssid.pubkey
+      return did == null || claim.did === did
     })
     )
 
