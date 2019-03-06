@@ -82,6 +82,9 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} did - Identity that expresses the claim
    * @param {string} privkey - Base64 encoded authentication mechanism
    * @param {object} data - Arbitrary object that constitutes the data being claimed.
+   * @param {object} data.DISCIPL_ALLOW - Special type of claim that manages ACL
+   * @param {string} data.DISCIPL_ALLOW.scope - Single link. If not present, the scope is the whole channel
+   * @param {string} data.DISCIPL_ALLOW.did - Did that is allowed access. If not present, everyone is allowed.
    * @returns {Promise<string>} link - Link to the produced claim
    */
   async claim (did, privkey, data) {
@@ -93,6 +96,10 @@ class EphemeralConnector extends BaseConnector {
       'message': encodeBase64(message),
       'signature': encodeBase64(signature),
       'publicKey': BaseConnector.referenceFromDid(did)
+    }
+
+    if (Object.keys(data).includes(BaseConnector.ALLOW)) {
+      claim['access'] = data[BaseConnector.ALLOW]
     }
 
     return this.linkFromReference(await this.ephemeralClient.claim(claim))

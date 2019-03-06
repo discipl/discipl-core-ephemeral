@@ -1,6 +1,7 @@
 import { decodeBase64 } from 'tweetnacl-util'
 import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
+import { BaseConnector } from '@discipl/core-baseconnector'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -32,11 +33,36 @@ class EphemeralStorage {
     }
 
     this.claimOwners[claimId] = publicKey
-    this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'] }
+    this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'], 'access': [] }
     this.storage[publicKey]['last'] = claimId
 
+    if (claim.access) {
+      let access = claim.access
+      let object = this.storage[publicKey]
+
+      if (BaseConnector.isLink(access.scope) && this.claimOwners[BaseConnector.referenceFromLink(access.scope)] === publicKey) {
+        object = this.storage[publicKey]['claims'][BaseConnector.referenceFromLink(access.scope)]
+      }
+
+      if (access.did == null) {
+        object['access'] = true
+      } else {
+        if (object['access'] !== true) {
+          if (BaseConnector.isDid(access.did)) {
+            object['access'].push(access.did)
+          }
+        }
+      }
+
+    }
+
     for (let observer of this.storage[publicKey].observers.concat(this.globalObservers)) {
-      let claim = Object.assign({}, this.storage[publicKey]['claims'][claimId])
+      let sourceClaim = this.storage[publicKey]['claims'][claimId]
+      let claim = {
+        'data': sourceClaim.data,
+        'signature': sourceClaim.signature,
+        'previous': sourceClaim.previous
+      }
       observer.next({ 'claim': claim, 'pubkey': publicKey })
     }
 
@@ -47,7 +73,13 @@ class EphemeralStorage {
     let publicKey = this.claimOwners[claimId]
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
-      return Object.assign({}, this.storage[publicKey]['claims'][claimId])
+      let sourceClaim = this.storage[publicKey]['claims'][claimId]
+      let claim = {
+        'data': sourceClaim.data,
+        'signature': sourceClaim.signature,
+        'previous': sourceClaim.previous
+      }
+      return claim
     }
   }
 
@@ -82,7 +114,7 @@ class EphemeralStorage {
 
   _lazyInitStorage (publicKey) {
     if (!Object.keys(this.storage).includes(publicKey)) {
-      this.storage[publicKey] = { 'claims': {}, 'last': null, 'observers': [] }
+      this.storage[publicKey] = { 'claims': {}, 'last': null, 'observers': [], 'access': [] }
     }
   }
 }
