@@ -16,7 +16,6 @@ let ephemeralServer
 const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
 const EPHEMERAL_WEBSOCKET_ENDPOINT = 'ws://localhost:3233'
 
-
 const timeoutPromise = (timeoutMillis) => {
   return new Promise(function (resolve, reject) {
     setTimeout(() => resolve(), timeoutMillis)
