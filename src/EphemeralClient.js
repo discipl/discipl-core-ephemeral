@@ -43,7 +43,6 @@ class EphemeralClient {
       'accessorSignature': accessorSignature
     })
 
-
     return socket
   }
 }

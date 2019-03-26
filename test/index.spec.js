@@ -6,7 +6,7 @@ import sinon from 'sinon'
 import axios from 'axios'
 import EphemeralConnector from '../src/index'
 import EphemeralServer from '../src/EphemeralServer'
-import { skip, take, toArray, last } from 'rxjs/operators'
+import { skip, take, toArray } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
 import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
@@ -352,7 +352,6 @@ describe('discipl-ephemeral-connector', () => {
           // TODO: Fix race conditions
           await timeoutPromise(50)
 
-
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
           expect(claimLink).to.be.a('string')
@@ -381,7 +380,6 @@ describe('discipl-ephemeral-connector', () => {
 
           // TODO: Fix race conditions
           await timeoutPromise(50)
-
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
@@ -457,7 +455,6 @@ describe('discipl-ephemeral-connector', () => {
           expect(claimLink).to.be.a('string')
           expect(claimLink2).to.be.a('string')
           let observed = await observer
-
 
           expect(observed).to.deep.equal(
             {

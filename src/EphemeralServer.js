@@ -28,7 +28,6 @@ class EphemeralServer {
         let params = JSON.parse(message)
         let subject = this.storage.observe(params.scope, params.accessorPubkey, params.accessorSignature)
 
-
         let errorCallback = (error) => {
           if (error != null && !error.message.includes('WebSocket is not open')) {
             console.log('Error while sending ws message: ' + error)
