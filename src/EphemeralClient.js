@@ -17,8 +17,8 @@ class EphemeralClient {
     return response.data
   }
 
-  async get (claimId) {
-    let response = await axios.post(this.serverEndpoint + '/get', { 'claimId': claimId })
+  async get (claimId, accessorPubkey, accessorSignature) {
+    let response = await axios.post(this.serverEndpoint + '/get', { 'claimId': claimId, 'accessorPubkey': accessorPubkey, 'accessorSignature': accessorSignature })
     return response.data
   }
 
@@ -34,14 +34,15 @@ class EphemeralClient {
     return response.data
   }
 
-  observe (publicKey = null) {
+  observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': this.w3cwebsocket })
 
-    if (publicKey != null) {
-      socket.next(publicKey)
-    } else {
-      socket.next('GLOBAL')
-    }
+    socket.next({
+      'scope': publicKey,
+      'accessorPubkey': accessorPubkey,
+      'accessorSignature': accessorSignature
+    })
+
 
     return socket
   }

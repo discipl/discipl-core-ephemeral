@@ -1,4 +1,4 @@
-import { decodeBase64 } from 'tweetnacl-util'
+import { decodeBase64, encodeUTF8 } from 'tweetnacl-util'
 import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
@@ -36,8 +36,9 @@ class EphemeralStorage {
     this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'], 'access': [] }
     this.storage[publicKey]['last'] = claimId
 
-    if (claim.access) {
-      let access = claim.access
+    let data = JSON.parse(encodeUTF8(decodeBase64(message)))
+    if (Object.keys(data).includes(BaseConnector.ALLOW) || claim.access) {
+      let access = data[BaseConnector.ALLOW] || claim.access
       let object = this.storage[publicKey]
 
       if (BaseConnector.isLink(access.scope) && this.claimOwners[BaseConnector.referenceFromLink(access.scope)] === publicKey) {
@@ -91,7 +92,13 @@ class EphemeralStorage {
     return false
   }
 
-  async get (claimId, sourcePubkey) {
+  async get (claimId, accessorPubkey, accessorSignature) {
+    if (accessorPubkey != null && accessorSignature != null) {
+      if (!nacl.sign.detached.verify(decodeBase64(claimId), decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
+        return null
+      }
+    }
+
     let publicKey = this.claimOwners[claimId]
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
@@ -101,7 +108,7 @@ class EphemeralStorage {
         'signature': sourceClaim.signature,
         'previous': sourceClaim.previous
       }
-      if (this._hasAccessTo(claimId, sourcePubkey)) {
+      if (this._hasAccessTo(claimId, accessorPubkey)) {
         return claim
       }
     }
@@ -117,11 +124,17 @@ class EphemeralStorage {
     return this.claimOwners[claimId]
   }
 
-  observe (publicKey = null, sourcePubkey = null) {
+  observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
+    if (accessorPubkey != null && accessorSignature != null) {
+      if (!nacl.sign.detached.verify(decodeBase64(publicKey), decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
+        return null
+      }
+    }
+
     let subject = new Subject()
     let listener = {
       'subject': subject,
-      'owner': sourcePubkey
+      'owner': accessorPubkey
     }
     if (publicKey !== null) {
       this._lazyInitStorage(publicKey)

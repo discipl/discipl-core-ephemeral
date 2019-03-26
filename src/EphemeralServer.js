@@ -25,12 +25,9 @@ class EphemeralServer {
     let wss = new ws.Server({ 'port': this.port + 1 })
     wss.on('connection', (ws) => {
       ws.on('message', (message) => {
-        let subject
-        if (message === '"GLOBAL"') {
-          subject = this.storage.observe()
-        } else {
-          subject = this.storage.observe(JSON.parse(message))
-        }
+        let params = JSON.parse(message)
+        let subject = this.storage.observe(params.scope, params.accessorPubkey, params.accessorSignature)
+
 
         let errorCallback = (error) => {
           if (error != null && !error.message.includes('WebSocket is not open')) {
@@ -50,12 +47,16 @@ class EphemeralServer {
   }
 
   async claim (req, res) {
+    // Protect against non-memory access injection
+    if (req.body.access) {
+      delete req.body.access
+    }
     let result = await this.storage.claim(req.body)
     res.send(stringify(result))
   }
 
   async get (req, res) {
-    let result = await this.storage.get(req.body.claimId)
+    let result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
     res.send(result)
   }
 

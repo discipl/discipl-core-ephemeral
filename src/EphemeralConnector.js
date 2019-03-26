@@ -98,10 +98,6 @@ class EphemeralConnector extends BaseConnector {
       'publicKey': BaseConnector.referenceFromDid(did)
     }
 
-    if (Object.keys(data).includes(BaseConnector.ALLOW)) {
-      claim['access'] = data[BaseConnector.ALLOW]
-    }
-
     return this.linkFromReference(await this.ephemeralClient.claim(claim))
   }
 
@@ -109,13 +105,21 @@ class EphemeralConnector extends BaseConnector {
    * Retrieve a claim by its link
    *
    * @param {string} link - Link to the claim
-   * @param {object} ssid - Identity object for authorization. Currently unused.
+   * @param {string} did - Did that wants access
+   * @param {string} privkey - Key of the did requesting access
    * @returns {Promise<{data: object, previous: string}>} Object containing the data of the claim and a link to the
    * claim before it.
    */
-  async get (link, ssid = null) {
+  async get (link, did = null, privkey = null) {
     let reference = BaseConnector.referenceFromLink(link)
-    let result = await this.ephemeralClient.get(reference)
+    let pubkey = BaseConnector.referenceFromDid(did)
+
+    let signature
+    if (pubkey != null && privkey != null) {
+      signature = encodeBase64(nacl.sign.detached(decodeBase64(reference), decodeBase64(privkey)))
+    }
+
+    let result = await this.ephemeralClient.get(reference, pubkey, signature)
 
     if (!(result) || !(result.data)) {
       return null
@@ -176,11 +180,20 @@ class EphemeralConnector extends BaseConnector {
    *
    * @param {string} did - Only observe claims from this did
    * @param {object} claimFilter - Only observe claims that contain this data. If a value is null, claims with the key will be observed.
+   * @param {string} accessorDid - Did requesting access
+   * @param {string} accessorPrivkey - Private key of did requesting access
    * @returns {Promise<Observable<{claim: {data: object, previous: string}, did: string}>>}
    */
-  async observe (did, claimFilter = {}) {
-    let pubkey = did == null ? null : BaseConnector.referenceFromDid(did)
-    let subject = this.ephemeralClient.observe(pubkey)
+  async observe (did, claimFilter = {}, accessorDid = null, accessorPrivkey = null) {
+    let pubkey = BaseConnector.referenceFromDid(did)
+    let accessorPubkey = BaseConnector.referenceFromDid(accessorDid)
+
+    let signature = null
+    if (accessorPubkey != null && accessorPrivkey != null) {
+      signature = encodeBase64(nacl.sign.detached(decodeBase64(pubkey), decodeBase64(accessorPrivkey)))
+    }
+
+    let subject = this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(map(claim => {
