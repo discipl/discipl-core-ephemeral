@@ -75,6 +75,10 @@ class EphemeralStorage {
   _hasAccessTo (claimId, pubkey) {
     let claimPublicKey = this.claimOwners[claimId]
 
+    if (claimPublicKey === pubkey) {
+      return true
+    }
+
     if (claimPublicKey == null) {
       return false
     }

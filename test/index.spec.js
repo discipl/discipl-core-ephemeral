@@ -480,11 +480,50 @@ describe('discipl-ephemeral-connector', () => {
           expect(claim.data).to.deep.equal({ 'need': 'beer' })
 
           ephemeralConnector = new EphemeralConnector()
+          await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
           let c = await ephemeralConnector.get(reference)
           expect(c).to.equal(null)
 
           let result = await ephemeralConnector.import(identity.did, reference, claim.data)
           c = await ephemeralConnector.get(result)
+          expect(c.data).to.deep.equal({ 'need': 'beer' })
+          expect(reference).to.equal(result)
+        })
+
+        it('should be able to import a claim using the signature from reference and be able to be accessed by the original owner', async () => {
+          let ephemeralConnector = new EphemeralConnector()
+          let identity = await ephemeralConnector.newIdentity()
+          let reference = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+
+          let claim = await ephemeralConnector.get(reference, identity.did, identity.privkey)
+          expect(claim.data).to.deep.equal({ 'need': 'beer' })
+
+          ephemeralConnector = new EphemeralConnector()
+          let c = await ephemeralConnector.get(reference)
+          expect(c).to.equal(null)
+
+          let result = await ephemeralConnector.import(identity.did, reference, claim.data)
+          c = await ephemeralConnector.get(result, identity.did, identity.privkey)
+          expect(c.data).to.deep.equal({ 'need': 'beer' })
+          expect(reference).to.equal(result)
+        })
+
+        it('should be able to import a claim using the signature from reference and be able to be accessed by the importer', async () => {
+          let ephemeralConnector = new EphemeralConnector()
+          let identity = await ephemeralConnector.newIdentity()
+          let reference = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+
+          let claim = await ephemeralConnector.get(reference, identity.did, identity.privkey)
+          expect(claim.data).to.deep.equal({ 'need': 'beer' })
+
+          ephemeralConnector = new EphemeralConnector()
+          let c = await ephemeralConnector.get(reference)
+          expect(c).to.equal(null)
+
+          let importerIdentity = await ephemeralConnector.newIdentity()
+
+          let result = await ephemeralConnector.import(identity.did, reference, claim.data, importerIdentity.did)
+          c = await ephemeralConnector.get(result, importerIdentity.did, importerIdentity.privkey)
           expect(c.data).to.deep.equal({ 'need': 'beer' })
           expect(reference).to.equal(result)
         })

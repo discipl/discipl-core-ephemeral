@@ -158,9 +158,10 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} did - Did that originally made this claim
    * @param {string} link - Link to the claim, which contains the signature over the data
    * @param {object} data - Data in the original claim
+   * @param {string} importerDid - Did that will automatically get access to imported claim
    * @returns {Promise<string>} - Link to the claim if successfully imported, null otherwise.
    */
-  async import (did, link, data) {
+  async import (did, link, data, importerDid = null) {
     let message = encodeBase64(decodeUTF8(stringify(data)))
     let claim = {
       'message': message,
@@ -168,9 +169,11 @@ class EphemeralConnector extends BaseConnector {
       'publicKey': BaseConnector.referenceFromDid(did)
     }
 
-    // TODO: Add importerDid as did
-    claim['access'] = {
-      'scope': link
+    if (importerDid != null) {
+      claim['access'] = {
+        'scope': link,
+        'did': importerDid
+      }
     }
     return this.linkFromReference(await this.ephemeralClient.claim(claim))
   }
