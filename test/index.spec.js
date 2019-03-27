@@ -368,7 +368,8 @@ describe('discipl-ephemeral-connector', () => {
           })
         })
 
-        it('should be able to claim something and listen to the connector to get multiple claims', async () => {
+        it('should be able to claim something and listen to the connector to get multiple claims', async function () {
+          this.timeout(5000)
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
@@ -376,15 +377,15 @@ describe('discipl-ephemeral-connector', () => {
 
           let observer = observable.pipe(skip(1)).pipe(take(2)).pipe(toArray()).toPromise()
 
-          let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
-
           // TODO: Fix race conditions
           await timeoutPromise(50)
 
+          let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
           expect(claimLink).to.be.a('string')
           expect(claimLink2).to.be.a('string')
+
           let observed = await observer
 
           expect(observed).to.deep.equal([{
