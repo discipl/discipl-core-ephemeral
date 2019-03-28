@@ -47,9 +47,7 @@ class EphemeralServer {
 
   async claim (req, res) {
     // Protect against non-memory access injection
-    console.log(req.body)
     if (req.body.access) {
-      console.log("Removing access")
       delete req.body.access
     }
     let result = await this.storage.claim(req.body)
