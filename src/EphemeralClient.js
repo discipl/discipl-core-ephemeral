@@ -1,5 +1,7 @@
 import axios from 'axios'
+import nacl from 'tweetnacl/nacl-fast'
 import { WebSocketSubject } from 'rxjs/webSocket'
+import { decodeBase64, decodeUTF8 } from 'tweetnacl-util'
 
 /**
  * The EphemeralClient is responsible for communicating to the server. Its interface matches that
@@ -17,8 +19,8 @@ class EphemeralClient {
     return response.data
   }
 
-  async get (claimId) {
-    let response = await axios.post(this.serverEndpoint + '/get', { 'claimId': claimId })
+  async get (claimId, accessorPubkey, accessorSignature) {
+    let response = await axios.post(this.serverEndpoint + '/get', { 'claimId': claimId, 'accessorPubkey': accessorPubkey, 'accessorSignature': accessorSignature })
     return response.data
   }
 
@@ -34,14 +36,22 @@ class EphemeralClient {
     return response.data
   }
 
-  observe (publicKey = null) {
+  observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
+    // Verify the signature client side to prevent weird behaviour if the signature is invalid
+    if (accessorPubkey != null && accessorSignature != null) {
+      let message = publicKey == null ? decodeUTF8('null') : decodeBase64(publicKey)
+      if (!nacl.sign.detached.verify(message, decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
+        return null
+      }
+    }
+
     let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': this.w3cwebsocket })
 
-    if (publicKey != null) {
-      socket.next(publicKey)
-    } else {
-      socket.next('GLOBAL')
-    }
+    socket.next({
+      'scope': publicKey,
+      'accessorPubkey': accessorPubkey,
+      'accessorSignature': accessorSignature
+    })
 
     return socket
   }
