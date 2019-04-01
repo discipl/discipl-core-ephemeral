@@ -219,7 +219,6 @@ describe('discipl-ephemeral-connector', () => {
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
-
           expect(claimLink).to.be.a('string')
 
           let privkey = decodeBase64(identity.privkey)
