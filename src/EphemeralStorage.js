@@ -1,4 +1,4 @@
-import { decodeBase64, encodeUTF8 } from 'tweetnacl-util'
+import { decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
 import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
@@ -130,7 +130,9 @@ class EphemeralStorage {
 
   observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     if (accessorPubkey != null && accessorSignature != null) {
-      if (!nacl.sign.detached.verify(decodeBase64(publicKey), decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
+      let message = publicKey == null ? decodeUTF8('null') : decodeBase64(publicKey)
+
+      if (!nacl.sign.detached.verify(message, decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
         return null
       }
     }

@@ -193,7 +193,8 @@ class EphemeralConnector extends BaseConnector {
 
     let signature = null
     if (accessorPubkey != null && accessorPrivkey != null) {
-      signature = encodeBase64(nacl.sign.detached(decodeBase64(pubkey), decodeBase64(accessorPrivkey)))
+      let message = pubkey == null ? decodeUTF8('null') : decodeBase64(pubkey)
+      signature = encodeBase64(nacl.sign.detached(message, decodeBase64(accessorPrivkey)))
     }
 
     let subject = this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
