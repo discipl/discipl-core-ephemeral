@@ -198,6 +198,10 @@ class EphemeralConnector extends BaseConnector {
 
     let subject = this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
 
+    if (subject == null) {
+      return null
+    }
+
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(map(claim => {
       claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.pubkey)

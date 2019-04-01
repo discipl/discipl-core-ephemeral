@@ -1,5 +1,7 @@
 import axios from 'axios'
+import nacl from 'tweetnacl/nacl-fast'
 import { WebSocketSubject } from 'rxjs/webSocket'
+import { decodeBase64 } from 'tweetnacl-util'
 
 /**
  * The EphemeralClient is responsible for communicating to the server. Its interface matches that
@@ -35,6 +37,12 @@ class EphemeralClient {
   }
 
   observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
+    if (accessorPubkey != null && accessorSignature != null) {
+      if (!nacl.sign.detached.verify(decodeBase64(publicKey), decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
+        return null
+      }
+    }
+
     let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': this.w3cwebsocket })
 
     socket.next({

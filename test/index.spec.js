@@ -212,6 +212,25 @@ describe('discipl-ephemeral-connector', () => {
           expect(claimLink).to.equal(null)
         })
 
+        it('should not be able to access a claim with a wrong key', async () => {
+          let ephemeralConnector = backend.createConnector()
+
+          let identity = await ephemeralConnector.newIdentity()
+
+          let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+
+
+          expect(claimLink).to.be.a('string')
+
+          let privkey = decodeBase64(identity.privkey)
+          privkey.reverse()
+          let wrongKey = encodeBase64(privkey)
+
+          let claim = await ephemeralConnector.get(claimLink, identity.did, wrongKey)
+
+          expect(claim).to.equal(null)
+        })
+
         it('should be able to claim something and grant a specific did access to the claim', async () => {
           let ephemeralConnector = backend.createConnector()
 
@@ -470,8 +489,21 @@ describe('discipl-ephemeral-connector', () => {
           )
         })
 
+        it('should not be able to observe claims with a faulty key', async () => {
+          let ephemeralConnector = backend.createConnector()
+
+          let identity = await ephemeralConnector.newIdentity()
+
+          let privkey = decodeBase64(identity.privkey)
+          privkey.reverse()
+          let wrongKey = encodeBase64(privkey)
+          let observable = await ephemeralConnector.observe(identity.did, {}, identity.did, wrongKey)
+
+          expect(observable).to.equal(null)
+        })
+
         it('should be able to import a claim using the signature from reference and importing it under same claim id', async () => {
-          let ephemeralConnector = new EphemeralConnector()
+          let ephemeralConnector = backend.createConnector()
           let identity = await ephemeralConnector.newIdentity()
           let reference = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
@@ -480,6 +512,7 @@ describe('discipl-ephemeral-connector', () => {
           let claim = await ephemeralConnector.get(reference)
           expect(claim.data).to.deep.equal({ 'need': 'beer' })
 
+          // Purposefully create local-memory connector
           ephemeralConnector = new EphemeralConnector()
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
           let c = await ephemeralConnector.get(reference)
@@ -492,13 +525,14 @@ describe('discipl-ephemeral-connector', () => {
         })
 
         it('should be able to import a claim using the signature from reference and be able to be accessed by the original owner', async () => {
-          let ephemeralConnector = new EphemeralConnector()
+          let ephemeralConnector = backend.createConnector()
           let identity = await ephemeralConnector.newIdentity()
           let reference = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
           let claim = await ephemeralConnector.get(reference, identity.did, identity.privkey)
           expect(claim.data).to.deep.equal({ 'need': 'beer' })
 
+          // Purposefully create local-memory connector
           ephemeralConnector = new EphemeralConnector()
           let c = await ephemeralConnector.get(reference)
           expect(c).to.equal(null)
@@ -510,13 +544,14 @@ describe('discipl-ephemeral-connector', () => {
         })
 
         it('should be able to import a claim using the signature from reference and be able to be accessed by the importer', async () => {
-          let ephemeralConnector = new EphemeralConnector()
+          let ephemeralConnector = backend.createConnector()
           let identity = await ephemeralConnector.newIdentity()
           let reference = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
           let claim = await ephemeralConnector.get(reference, identity.did, identity.privkey)
           expect(claim.data).to.deep.equal({ 'need': 'beer' })
 
+          // Purposefully create local-memory connector
           ephemeralConnector = new EphemeralConnector()
           let c = await ephemeralConnector.get(reference)
           expect(c).to.equal(null)
