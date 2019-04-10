@@ -49,6 +49,14 @@ class EphemeralClient {
 
     let socket = null
 
+    /* The construct below is slightly convoluted. This is why:
+       This function wants to return an observable. Since there is client-server communication involved, there is the
+       potential for race conditions. In particular, since the websocket is only opened once the observable is
+       subscribed to, the nonce is held in a local queue until subscription. At subscription time, the nonce is sent.
+       The server has to actually receive it and put a listener in the right place. This means that the subscribe call
+       itself does not guarantee that the listener is immediately in place. This is the function of the readyPromise.
+       It gets confirmation from the server that the listener is in place, and is only resolved then.
+    */
     let readyPromise = new Promise((resolve, reject) => {
       const timeoutPromise = (timeoutMillis) => {
         return new Promise(function (resolve, reject) {
@@ -60,6 +68,8 @@ class EphemeralClient {
         'WebSocketCtor': this.w3cwebsocket,
         openObserver: {
           'next': async (e) => {
+            // When the websocket is opened, the nonce is sent. The POST below sends the information to the server
+            // that goes with this nonce, allowing it to start the actual observe.
             const MAX_TRIES = 10
             for (let i = 0; i < MAX_TRIES; i++) {
               await timeoutPromise(50)
