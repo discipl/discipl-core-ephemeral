@@ -185,7 +185,8 @@ class EphemeralConnector extends BaseConnector {
    * @param {object} claimFilter - Only observe claims that contain this data. If a value is null, claims with the key will be observed.
    * @param {string} accessorDid - Did requesting access
    * @param {string} accessorPrivkey - Private key of did requesting access
-   * @returns {Promise<Observable<{claim: {data: object, previous: string}, did: string}>>}
+   * @returns {Promise<{observable: Observable<{claim: {data: object, previous: string}, did: string}>, readyPromise: Promise<>}>} -
+   * The observable can be subscribed to. The readyPromise signals that the observation has truly started.
    */
   async observe (did, claimFilter = {}, accessorDid = null, accessorPrivkey = null) {
     let pubkey = BaseConnector.referenceFromDid(did)
@@ -197,11 +198,7 @@ class EphemeralConnector extends BaseConnector {
       signature = encodeBase64(nacl.sign.detached(message, decodeBase64(accessorPrivkey)))
     }
 
-    let subject = this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
-
-    if (subject == null) {
-      return null
-    }
+    let [subject, readyPromise] = await this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(map(claim => {
@@ -233,7 +230,7 @@ class EphemeralConnector extends BaseConnector {
     })
     )
 
-    return processedSubject
+    return { 'observable': processedSubject, 'readyPromise': readyPromise }
   }
 }
 

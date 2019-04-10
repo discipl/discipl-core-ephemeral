@@ -128,12 +128,12 @@ class EphemeralStorage {
     return this.claimOwners[claimId]
   }
 
-  observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
+  async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     if (accessorPubkey != null && accessorSignature != null) {
       let message = publicKey == null ? decodeUTF8('null') : decodeBase64(publicKey)
 
       if (!nacl.sign.detached.verify(message, decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
-        return null
+        throw new Error('Invalid authorization')
       }
     }
 
@@ -150,7 +150,7 @@ class EphemeralStorage {
       this.globalObservers.push(listener)
     }
 
-    return subject
+    return [subject, Promise.resolve()]
   }
 
   _verifySignature (claim) {
