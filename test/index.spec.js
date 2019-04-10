@@ -6,7 +6,7 @@ import sinon from 'sinon'
 import axios from 'axios'
 import EphemeralConnector from '../src/index'
 import EphemeralServer from '../src/EphemeralServer'
-import { skip, take, toArray } from 'rxjs/operators'
+import { take, toArray } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
 import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
@@ -423,8 +423,8 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observeResult = await ephemeralConnector.observe(identity.did)
-          let observer = observeResult.observable.pipe(skip(1)).pipe(take(1)).toPromise()
+          let observeResult = await ephemeralConnector.observe(identity.did, { 'need': null })
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
 
           await observeResult.readyPromise
 
@@ -454,8 +454,8 @@ describe('discipl-ephemeral-connector', () => {
 
           let identity = await ephemeralConnector.newIdentity()
           let accessorIdentity = await ephemeralConnector.newIdentity()
-          let observeResult = await ephemeralConnector.observe(identity.did, {}, accessorIdentity.did, accessorIdentity.privkey)
-          let observer = observeResult.observable.pipe(skip(1)).pipe(take(1)).toPromise()
+          let observeResult = await ephemeralConnector.observe(identity.did, { 'need': null }, accessorIdentity.did, accessorIdentity.privkey)
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
 
           await observeResult.readyPromise
 
