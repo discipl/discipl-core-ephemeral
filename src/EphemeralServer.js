@@ -10,6 +10,7 @@ class EphemeralServer {
   constructor (port) {
     this.port = port
     this.storage = new EphemeralStorage()
+    this.websockets = {}
   }
 
   start () {
@@ -19,26 +20,14 @@ class EphemeralServer {
     app.post('/get', (req, res) => this.get(req, res))
     app.post('/getLatest', (req, res) => this.getLatest(req, res))
     app.post('/getPublicKey', (req, res) => this.getPublicKey(req, res))
+    app.post('/observe', (req, res) => this.observe(req, res))
 
     this.server = app.listen(this.port, () => console.log(`Ephemeral server listening on ${this.port}!`))
 
     let wss = new ws.Server({ 'port': this.port + 1 })
     wss.on('connection', (ws) => {
-      ws.on('message', (message) => {
-        let params = JSON.parse(message)
-        let subject = this.storage.observe(params.scope, params.accessorPubkey, params.accessorSignature)
-
-        let errorCallback = (error) => {
-          if (error != null && !error.message.includes('WebSocket is not open')) {
-            console.log('Error while sending ws message: ' + error)
-          }
-        }
-
-        let observer = {
-          'next': (value) => ws.send(stringify(value), {}, errorCallback)
-        }
-
-        subject.subscribe(observer)
+      ws.on('message', (nonce) => {
+        this.websockets[JSON.parse(nonce)] = ws
       })
     })
 
@@ -66,6 +55,33 @@ class EphemeralServer {
   async getPublicKey (req, res) {
     let result = await this.storage.getPublicKey(req.body.claimId)
     res.send(result)
+  }
+
+  async observe (req, res) {
+    if (!req.body.nonce || !Object.keys(this.websockets).includes(req.body.nonce)) {
+      res.sendStatus(404)
+      return
+    }
+
+    let observeResult = await this.storage.observe(req.body.scope, req.body.accessorPubkey, req.body.accessorSignature)
+
+    let subject = observeResult[0]
+
+    let errorCallback = (error) => {
+      if (error != null && !error.message.includes('WebSocket is not open')) {
+        console.log('Error while sending ws message: ' + error)
+      }
+    }
+
+    let ws = this.websockets[req.body.nonce]
+
+    let observer = {
+      'next': (value) => ws.send(stringify(value), {}, errorCallback)
+    }
+
+    subject.subscribe(observer)
+
+    res.sendStatus(200)
   }
 
   close () {

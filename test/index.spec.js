@@ -17,12 +17,6 @@ let ephemeralServer
 const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
 const EPHEMERAL_WEBSOCKET_ENDPOINT = 'ws://localhost:3233'
 
-const timeoutPromise = (timeoutMillis) => {
-  return new Promise(function (resolve, reject) {
-    setTimeout(() => resolve(), timeoutMillis)
-  })
-}
-
 describe('discipl-ephemeral-connector', () => {
   describe('without a live server', () => {
     it('should present a name', async () => {
@@ -363,12 +357,11 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(identity.did)
-
+          let observeResult = await ephemeralConnector.observe(identity.did)
           let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
-          let observer = observable.pipe(take(1)).toPromise()
-          // TODO: Fix race conditions
-          await timeoutPromise(50)
+
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
+          await observeResult.readyPromise
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
@@ -391,14 +384,13 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(identity.did)
-
-          let observer = observable.pipe(skip(1)).pipe(take(2)).pipe(toArray()).toPromise()
-
-          // TODO: Fix race conditions
-          await timeoutPromise(50)
-
+          let observeResult = await ephemeralConnector.observe(identity.did)
           let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
+          let observer = observeResult.observable.pipe(take(2)).pipe(toArray()).toPromise()
+
+          await observeResult.readyPromise
+
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
           expect(claimLink).to.be.a('string')
@@ -431,8 +423,10 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(identity.did)
-          let observer = observable.pipe(skip(1)).pipe(take(1)).toPromise()
+          let observeResult = await ephemeralConnector.observe(identity.did)
+          let observer = observeResult.observable.pipe(skip(1)).pipe(take(1)).toPromise()
+
+          await observeResult.readyPromise
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let allowClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
@@ -460,8 +454,10 @@ describe('discipl-ephemeral-connector', () => {
 
           let identity = await ephemeralConnector.newIdentity()
           let accessorIdentity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(identity.did, {}, accessorIdentity.did, accessorIdentity.privkey)
-          let observer = observable.pipe(skip(1)).pipe(take(1)).toPromise()
+          let observeResult = await ephemeralConnector.observe(identity.did, {}, accessorIdentity.did, accessorIdentity.privkey)
+          let observer = observeResult.observable.pipe(skip(1)).pipe(take(1)).toPromise()
+
+          await observeResult.readyPromise
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
           let allowClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {
@@ -496,9 +492,13 @@ describe('discipl-ephemeral-connector', () => {
           let privkey = decodeBase64(identity.privkey)
           privkey.reverse()
           let wrongKey = encodeBase64(privkey)
-          let observable = await ephemeralConnector.observe(identity.did, {}, identity.did, wrongKey)
-
-          expect(observable).to.equal(null)
+          await ephemeralConnector.observe(identity.did, {}, identity.did, wrongKey)
+            .then((result) => {
+              expect.fail(null, null, 'Observable succeeded')
+            })
+            .catch((e) => {
+              expect(e.message).to.equal('Invalid authorization')
+            })
         })
 
         it('should be able to import a claim using the signature from reference and importing it under same claim id', async () => {
@@ -567,10 +567,10 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(null, { 'need': 'beer' })
-          let observer = observable.pipe(take(1)).toPromise()
-          // TODO: Fix race conditions
-          await timeoutPromise(50)
+          let observeResult = await ephemeralConnector.observe(null, { 'need': 'beer' })
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
+
+          await observeResult.readyPromise
 
           let accessClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
@@ -594,10 +594,10 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(null, { 'need': 'beer' }, identity.did, identity.privkey)
-          let observer = observable.pipe(take(1)).toPromise()
-          // TODO: Fix race conditions
-          await timeoutPromise(50)
+          let observeResult = await ephemeralConnector.observe(null, { 'need': 'beer' }, identity.did, identity.privkey)
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
+
+          await observeResult.readyPromise
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
@@ -619,10 +619,10 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(identity.did, { 'need': 'wine' })
-          let observer = observable.pipe(take(1)).toPromise()
-          // TODO: Fix race conditions
-          await timeoutPromise(50)
+          let observeResult = await ephemeralConnector.observe(identity.did, { 'need': 'wine' })
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
+
+          await observeResult.readyPromise
 
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
@@ -646,10 +646,10 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(identity.did, { 'need': null })
-          let observer = observable.pipe(take(1)).toPromise()
-          // TODO: Fix race conditions
-          await timeoutPromise(50)
+          let observeResult = await ephemeralConnector.observe(identity.did, { 'need': null })
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
+
+          await observeResult.readyPromise
 
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
@@ -673,10 +673,10 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
-          let observable = await ephemeralConnector.observe(null, { 'need': null })
-          let observer = observable.pipe(take(1)).toPromise()
-          // TODO: Fix race conditions
-          await timeoutPromise(50)
+          let observeResult = await ephemeralConnector.observe(null, { 'need': null })
+          let observer = observeResult.observable.pipe(take(1)).toPromise()
+
+          await observeResult.readyPromise
 
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 

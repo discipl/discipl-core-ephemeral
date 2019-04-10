@@ -1,7 +1,7 @@
 import axios from 'axios'
 import nacl from 'tweetnacl/nacl-fast'
 import { WebSocketSubject } from 'rxjs/webSocket'
-import { decodeBase64, decodeUTF8 } from 'tweetnacl-util'
+import { decodeBase64, decodeUTF8, encodeBase64 } from 'tweetnacl-util'
 
 /**
  * The EphemeralClient is responsible for communicating to the server. Its interface matches that
@@ -36,24 +36,55 @@ class EphemeralClient {
     return response.data
   }
 
-  observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
+  async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     // Verify the signature client side to prevent weird behaviour if the signature is invalid
     if (accessorPubkey != null && accessorSignature != null) {
       let message = publicKey == null ? decodeUTF8('null') : decodeBase64(publicKey)
       if (!nacl.sign.detached.verify(message, decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
-        return null
+        throw new Error('Invalid authorization')
       }
     }
 
-    let socket = new WebSocketSubject({ 'url': this.websocketEndpoint, 'WebSocketCtor': this.w3cwebsocket })
+    let nonce = encodeBase64(nacl.randomBytes(32))
 
-    socket.next({
-      'scope': publicKey,
-      'accessorPubkey': accessorPubkey,
-      'accessorSignature': accessorSignature
+    let socket = null
+
+    let readyPromise = new Promise((resolve, reject) => {
+      const timeoutPromise = (timeoutMillis) => {
+        return new Promise(function (resolve, reject) {
+          setTimeout(() => resolve(), timeoutMillis)
+        })
+      }
+      socket = new WebSocketSubject({
+        'url': this.websocketEndpoint,
+        'WebSocketCtor': this.w3cwebsocket,
+        openObserver: {
+          'next': async (e) => {
+            const MAX_TRIES = 10
+            for (let i = 0; i < MAX_TRIES; i++) {
+              await timeoutPromise(50)
+
+              await axios.post(this.serverEndpoint + '/observe', {
+                'nonce': nonce,
+                'scope': publicKey,
+                'accessorPubkey': accessorPubkey,
+                'accessorSignature': accessorSignature
+              }).then((r) => {
+                resolve()
+              }).catch((e) => {
+                // Purposeful no-op
+              })
+            }
+
+            reject(new Error('Timed out'))
+          }
+        }
+      })
     })
 
-    return socket
+    socket.next(nonce)
+
+    return [socket, readyPromise]
   }
 }
 
