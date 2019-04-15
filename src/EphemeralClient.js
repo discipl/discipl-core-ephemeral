@@ -73,17 +73,19 @@ class EphemeralClient {
             const MAX_TRIES = 10
             for (let i = 0; i < MAX_TRIES; i++) {
               await timeoutPromise(50)
-
-              await axios.post(this.serverEndpoint + '/observe', {
-                'nonce': nonce,
-                'scope': publicKey,
-                'accessorPubkey': accessorPubkey,
-                'accessorSignature': accessorSignature
-              }).then((r) => {
-                resolve()
-              }).catch((e) => {
-                // Purposeful no-op
-              })
+              try {
+                await axios.post(this.serverEndpoint + '/observe', {
+                  'nonce': nonce,
+                  'scope': publicKey,
+                  'accessorPubkey': accessorPubkey,
+                  'accessorSignature': accessorSignature
+                }).then((r) => {
+                  resolve()
+                })
+                return
+              } catch (e) {
+                // Purpose-ful no-op
+              }
             }
 
             reject(new Error('Timed out'))
