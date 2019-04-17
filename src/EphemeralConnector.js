@@ -207,9 +207,11 @@ class EphemeralConnector extends BaseConnector {
         claim['claim'].previous = this.linkFromReference(claim['claim'].previous)
       }
 
+      claim['link'] = this.linkFromReference(claim['claim'].signature)
       delete claim['claim'].signature
       claim['did'] = this.didFromReference(claim['pubkey'])
       delete claim['pubkey']
+
       return claim
     })).pipe(filter(claim => {
       if (claimFilter != null) {
