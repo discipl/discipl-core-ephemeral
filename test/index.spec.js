@@ -375,7 +375,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': accessClaimLink
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink
           })
         })
 
@@ -405,7 +406,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': accessClaimLink
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink
           },
           {
             'claim': {
@@ -414,7 +416,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': claimLink
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink2
           }
           ])
         })
@@ -444,7 +447,8 @@ describe('discipl-ephemeral-connector', () => {
                 },
                 'previous': allowClaimLink
               },
-              'did': identity.did
+              'did': identity.did,
+              'link': claimLink2
             }
           )
         })
@@ -479,7 +483,8 @@ describe('discipl-ephemeral-connector', () => {
                 },
                 'previous': allowClaimLink
               },
-              'did': identity.did
+              'did': identity.did,
+              'link': claimLink2
             }
           )
         })
@@ -586,7 +591,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': accessClaimLink
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink
           })
         })
 
@@ -611,7 +617,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': null
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink
           })
         })
 
@@ -627,7 +634,7 @@ describe('discipl-ephemeral-connector', () => {
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
-          await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
+          let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
           await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'tea' })
           let observed = await observer
 
@@ -638,7 +645,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': claimLink
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink2
           })
         })
 
@@ -654,7 +662,7 @@ describe('discipl-ephemeral-connector', () => {
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'desire': 'beer' })
-          await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
+          let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
           await ephemeralConnector.claim(identity.did, identity.privkey, { 'desire': 'tea' })
           let observed = await observer
 
@@ -665,7 +673,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': claimLink
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink2
           })
         })
 
@@ -681,7 +690,7 @@ describe('discipl-ephemeral-connector', () => {
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'desire': 'beer' })
-          await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
+          let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })
           await ephemeralConnector.claim(identity.did, identity.privkey, { 'desire': 'tea' })
           let observed = await observer
 
@@ -692,7 +701,8 @@ describe('discipl-ephemeral-connector', () => {
               },
               'previous': claimLink
             },
-            'did': identity.did
+            'did': identity.did,
+            'link': claimLink2
           })
         })
       })
