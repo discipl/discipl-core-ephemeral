@@ -95,6 +95,7 @@ describe('discipl-ephemeral-connector', () => {
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           expect(claimLink).to.be.a('string')
+          expect(claimLink.length).to.equal(111)
 
           let claim = await ephemeralConnector.get(claimLink)
 
