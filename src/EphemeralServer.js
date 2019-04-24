@@ -2,6 +2,7 @@ import express from 'express'
 import ws from 'ws'
 import EphemeralStorage from './EphemeralStorage'
 import stringify from 'json-stable-stringify'
+import forge from 'node-forge'
 
 /**
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
@@ -20,7 +21,8 @@ class EphemeralServer {
     app.post('/get', (req, res) => this.get(req, res))
     app.post('/getLatest', (req, res) => this.getLatest(req, res))
     app.post('/getPublicKey', (req, res) => this.getPublicKey(req, res))
-    app.post('/storeCert', (req, res) => this.storeFingerprint(req, res))
+    app.post('/storeCert', (req, res) => this.storeCert(req, res))
+    app.post('/getCert', (req, res) => this.getCert(req, res))
     app.post('/observe', (req, res) => this.observe(req, res))
 
     this.server = app.listen(this.port, () => console.log(`Ephemeral server listening on ${this.port}!`))
@@ -40,13 +42,21 @@ class EphemeralServer {
     if (req.body.access) {
       delete req.body.access
     }
-    let result = await this.storage.claim(req.body)
-    res.send(stringify(result))
+    try {
+      let result = await this.storage.claim(req.body)
+      res.send(stringify(result))
+    } catch (e) {
+      res.status(401).send(e)
+    }
   }
 
   async get (req, res) {
-    let result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
-    res.send(result)
+    try {
+      let result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
+      res.send(result)
+    } catch (e) {
+      res.status(401).send(e)
+    }
   }
 
   async getLatest (req, res) {
@@ -58,9 +68,14 @@ class EphemeralServer {
     res.send(result)
   }
 
-  async storeFingerprint (req, res) {
-    await this.storage.storeCert(req.body.fingerprint, req.body.cert)
+  async storeCert (req, res) {
+    await this.storage.storeCert(req.body.fingerprint, forge.pki.certificateFromPem(req.body.cert))
     res.sendStatus(200)
+  }
+
+  async getCert (req, res) {
+    let result = await this.storage.getCertForFingerprint(req.body.fingerprint)
+    res.send(forge.pki.certificateToPem(result))
   }
 
   async observe (req, res) {

@@ -28,9 +28,9 @@ describe('discipl-ephemeral-connector', () => {
       let identity = await ephemeralConnector.newIdentity()
 
       expect(identity.did).to.be.a('string')
-      expect(identity.did.length).to.equal(66)
+      expect(identity.did.length).to.equal(62)
       expect(identity.privkey).to.be.a('string')
-      expect(identity.privkey.length).to.equal(88)
+      expect(identity.privkey.length).to.be.above(1700)
     })
 
     it('should be able to detect wrong signatures when getting a claim', async () => {

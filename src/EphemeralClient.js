@@ -1,7 +1,6 @@
 import axios from 'axios'
-import nacl from 'tweetnacl/nacl-fast'
 import { WebSocketSubject } from 'rxjs/webSocket'
-import { decodeBase64, decodeUTF8, encodeBase64 } from 'tweetnacl-util'
+import forge from 'node-forge'
 
 /**
  * The EphemeralClient is responsible for communicating to the server. Its interface matches that
@@ -36,22 +35,20 @@ class EphemeralClient {
     return response.data
   }
 
-  async storeFingerprint (fingerprint, cert) {
-    let response = await axios.post(this.serverEndpoint + '/storeCert', { 'fingerprint': fingerprint, 'cert': cert })
+  async getCertForFingerprint (fingerprint) {
+    let response = await axios.post(this.serverEndpoint + '/getCert', { 'fingerprint': fingerprint })
+
+    return forge.pki.certificateFromPem(response.data)
+  }
+
+  async storeCert (fingerprint, cert) {
+    let response = await axios.post(this.serverEndpoint + '/storeCert', { 'fingerprint': fingerprint, 'cert': forge.pki.certificateToPem(cert) })
 
     return response.data
   }
 
   async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
-    // Verify the signature client side to prevent weird behaviour if the signature is invalid
-    if (accessorPubkey != null && accessorSignature != null) {
-      let message = publicKey == null ? decodeUTF8('null') : decodeBase64(publicKey)
-      if (!nacl.sign.detached.verify(message, decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
-        throw new Error('Invalid authorization')
-      }
-    }
-
-    let nonce = encodeBase64(nacl.randomBytes(32))
+    let nonce = forge.util.encode64(forge.random.getBytesSync(32))
 
     let socket = null
 

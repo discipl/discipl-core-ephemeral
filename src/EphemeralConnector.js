@@ -77,7 +77,7 @@ class EphemeralConnector extends BaseConnector {
 
     return {
       'did': this.didFromReference(fingerprint),
-      'privkey': options.cert ? null : forge.pki.privateKeyToPem(keypair.privateKey),
+      'privkey': options.privkey || forge.pki.privateKeyToPem(keypair.privateKey),
       'metadata': {
         'cert': forge.pki.certificateToPem(cert)
       }
