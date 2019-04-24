@@ -1,9 +1,7 @@
 import { filter, flatMap } from 'rxjs/operators'
-import { decodeBase64, decodeUTF8, encodeBase64 } from 'tweetnacl-util'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
-import stringify from 'json-stable-stringify'
 import forge from 'node-forge'
 import CryptoUtil from './CryptoUtil'
 
@@ -67,10 +65,27 @@ class EphemeralConnector extends BaseConnector {
    *
    * @returns {Promise<{privkey: string, did: string}>} ssid-object, containing both the did and the authentication mechanism.
    */
-  async newIdentity () {
-    let cert = forge.pki.createCertificate()
-
+  async newIdentity (options = {}) {
     let keypair = forge.pki.rsa.generateKeyPair(2048)
+    let cert = options.cert ? forge.pki.certificateFromPem(options.cert) : this._createCert(keypair)
+
+    let fingerprint = forge.pki.getPublicKeyFingerprint(cert.publicKey, {
+      'encoding': 'hex'
+    })
+
+    await this.ephemeralClient.storeCert(fingerprint, cert)
+
+    return {
+      'did': this.didFromReference(fingerprint),
+      'privkey': options.cert ? null : forge.pki.privateKeyToPem(keypair.privateKey),
+      'metadata': {
+        'cert': forge.pki.certificateToPem(cert)
+      }
+    }
+  }
+
+  _createCert (keypair) {
+    let cert = forge.pki.createCertificate()
 
     cert.publicKey = keypair.publicKey
     cert.serialNumber = '01'
@@ -139,19 +154,7 @@ class EphemeralConnector extends BaseConnector {
     cert.setIssuer(attrs)
     cert.sign(keypair.privateKey)
 
-    let fingerprint = forge.pki.getPublicKeyFingerprint(keypair.publicKey, {
-      'encoding': 'hex'
-    })
-
-    await this.ephemeralClient.storeCert(fingerprint, cert)
-
-    return {
-      'did': this.didFromReference(fingerprint),
-      'privkey': forge.pki.privateKeyToPem(keypair.privateKey),
-      'metadata': {
-        'cert': forge.pki.certificateToPem(cert)
-      }
-    }
+    return cert
   }
 
   /**
@@ -237,9 +240,8 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<string>} - Link to the claim if successfully imported, null otherwise.
    */
   async import (did, link, data, importerDid = null) {
-    let message = encodeBase64(decodeUTF8(stringify(data)))
     let claim = {
-      'message': message,
+      'message': data,
       'signature': BaseConnector.referenceFromLink(link),
       'publicKey': BaseConnector.referenceFromDid(did)
     }
@@ -269,7 +271,7 @@ class EphemeralConnector extends BaseConnector {
 
     let signature = null
     if (accessorPubkey != null && accessorPrivkey != null) {
-      let message = pubkey == null ? decodeUTF8('null') : decodeBase64(pubkey)
+      let message = pubkey == null ? 'null' : pubkey
       signature = CryptoUtil.sign(accessorPrivkey, message)
     }
 

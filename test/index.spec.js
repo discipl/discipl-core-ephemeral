@@ -501,7 +501,7 @@ describe('discipl-ephemeral-connector', () => {
               expect.fail(null, null, 'Observable succeeded')
             })
             .catch((e) => {
-              expect(e.message).to.equal('Encryption block is invalid.')
+              expect(e.message).to.be.a('string')
             })
         })
 
@@ -517,14 +517,15 @@ describe('discipl-ephemeral-connector', () => {
 
           // Purposefully create local-memory connector
           ephemeralConnector = new EphemeralConnector()
+          await ephemeralConnector.newIdentity({ 'cert': identity.metadata.cert })
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
           let c = await ephemeralConnector.get(reference)
           expect(c).to.equal(null)
 
           let result = await ephemeralConnector.import(identity.did, reference, claim.data)
+          expect(reference).to.equal(result)
           c = await ephemeralConnector.get(result)
           expect(c.data).to.deep.equal({ 'need': 'beer' })
-          expect(reference).to.equal(result)
         })
 
         it('should be able to import a claim using the signature from reference and be able to be accessed by the original owner', async () => {
@@ -537,6 +538,7 @@ describe('discipl-ephemeral-connector', () => {
 
           // Purposefully create local-memory connector
           ephemeralConnector = new EphemeralConnector()
+          await ephemeralConnector.newIdentity({ 'cert': identity.metadata.cert })
           let c = await ephemeralConnector.get(reference)
           expect(c).to.equal(null)
 
@@ -556,6 +558,7 @@ describe('discipl-ephemeral-connector', () => {
 
           // Purposefully create local-memory connector
           ephemeralConnector = new EphemeralConnector()
+          await ephemeralConnector.newIdentity({ 'cert': identity.metadata.cert })
           let c = await ephemeralConnector.get(reference)
           expect(c).to.equal(null)
 

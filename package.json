@@ -28,8 +28,6 @@
     "json-stable-stringify": "^1.0.1",
     "node-forge": "^0.8.2",
     "rxjs": "^6.4.0",
-    "tweetnacl": "^1.0.1",
-    "tweetnacl-util": "^0.15.0",
     "ws": "^6.1.4"
   },
   "devDependencies": {

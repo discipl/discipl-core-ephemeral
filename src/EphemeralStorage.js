@@ -1,4 +1,3 @@
-import { decodeBase64, decodeUTF8 } from 'tweetnacl-util'
 import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import forge from 'node-forge'
@@ -139,7 +138,7 @@ class EphemeralStorage {
 
   async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     if (accessorPubkey != null && accessorSignature != null) {
-      let message = publicKey == null ? decodeUTF8('null') : decodeBase64(publicKey)
+      let message = publicKey == null ? 'null' : publicKey
 
       let cert = await this.getCertForFingerprint(accessorPubkey)
       CryptoUtil.verifySignature(message, accessorSignature, cert)
