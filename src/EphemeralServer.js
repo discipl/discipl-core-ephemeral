@@ -20,6 +20,7 @@ class EphemeralServer {
     app.post('/get', (req, res) => this.get(req, res))
     app.post('/getLatest', (req, res) => this.getLatest(req, res))
     app.post('/getPublicKey', (req, res) => this.getPublicKey(req, res))
+    app.post('/storeCert', (req, res) => this.storeFingerprint(req, res))
     app.post('/observe', (req, res) => this.observe(req, res))
 
     this.server = app.listen(this.port, () => console.log(`Ephemeral server listening on ${this.port}!`))
@@ -55,6 +56,11 @@ class EphemeralServer {
   async getPublicKey (req, res) {
     let result = await this.storage.getPublicKey(req.body.claimId)
     res.send(result)
+  }
+
+  async storeFingerprint (req, res) {
+    await this.storage.storeCert(req.body.fingerprint, req.body.cert)
+    res.sendStatus(200)
   }
 
   async observe (req, res) {

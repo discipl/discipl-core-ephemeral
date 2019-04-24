@@ -9,7 +9,6 @@ import EphemeralServer from '../src/EphemeralServer'
 import { take, toArray } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
-import { decodeBase64, encodeBase64 } from 'tweetnacl-util'
 import { BaseConnector } from '@discipl/core-baseconnector'
 
 let ephemeralServer
@@ -95,7 +94,7 @@ describe('discipl-ephemeral-connector', () => {
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           expect(claimLink).to.be.a('string')
-          expect(claimLink.length).to.equal(111)
+          expect(claimLink.length).to.equal(367)
 
           let claim = await ephemeralConnector.get(claimLink)
 
@@ -198,31 +197,32 @@ describe('discipl-ephemeral-connector', () => {
 
           let identity = await ephemeralConnector.newIdentity()
 
-          let privkey = decodeBase64(identity.privkey)
-          privkey.reverse()
-          let wrongKey = encodeBase64(privkey)
+          let wrongIdentity = await ephemeralConnector.newIdentity()
 
-          let claimLink = await ephemeralConnector.claim(identity.did, wrongKey, { 'need': 'beer' })
-
-          expect(claimLink).to.equal(null)
+          try {
+            await ephemeralConnector.claim(identity.did, wrongIdentity.privkey, { 'need': 'beer' })
+            expect.fail(null, null, 'Managed to claim something')
+          } catch (e) {
+            expect(e).to.not.equal(null)
+          }
         })
 
         it('should not be able to access a claim with a wrong key', async () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
+          let wrongIdentity = await ephemeralConnector.newIdentity()
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
 
           expect(claimLink).to.be.a('string')
 
-          let privkey = decodeBase64(identity.privkey)
-          privkey.reverse()
-          let wrongKey = encodeBase64(privkey)
-
-          let claim = await ephemeralConnector.get(claimLink, identity.did, wrongKey)
-
-          expect(claim).to.equal(null)
+          try {
+            await ephemeralConnector.get(claimLink, identity.did, wrongIdentity.privkey)
+            expect.fail(null, null, 'Managed to claim something')
+          } catch (e) {
+            expect(e).to.not.equal(null)
+          }
         })
 
         it('should be able to claim something and grant a specific did access to the claim', async () => {
@@ -494,16 +494,14 @@ describe('discipl-ephemeral-connector', () => {
           let ephemeralConnector = backend.createConnector()
 
           let identity = await ephemeralConnector.newIdentity()
+          let wrongIdentity = await ephemeralConnector.newIdentity()
 
-          let privkey = decodeBase64(identity.privkey)
-          privkey.reverse()
-          let wrongKey = encodeBase64(privkey)
-          await ephemeralConnector.observe(identity.did, {}, identity.did, wrongKey)
+          await ephemeralConnector.observe(identity.did, {}, identity.did, wrongIdentity.privkey)
             .then((result) => {
               expect.fail(null, null, 'Observable succeeded')
             })
             .catch((e) => {
-              expect(e.message).to.equal('Invalid authorization')
+              expect(e.message).to.equal('Encryption block is invalid.')
             })
         })
 

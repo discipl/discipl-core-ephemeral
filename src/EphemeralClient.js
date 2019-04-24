@@ -36,6 +36,12 @@ class EphemeralClient {
     return response.data
   }
 
+  async storeFingerprint (fingerprint, cert) {
+    let response = await axios.post(this.serverEndpoint + '/storeCert', { 'fingerprint': fingerprint, 'cert': cert })
+
+    return response.data
+  }
+
   async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     // Verify the signature client side to prevent weird behaviour if the signature is invalid
     if (accessorPubkey != null && accessorSignature != null) {
