@@ -61,13 +61,20 @@ class EphemeralConnector extends BaseConnector {
   }
 
   /**
-   * Generates a new ephemeral identity, backed by a keypair generated with tweetnacl.
+   * @typedef {Object} EphemeralSsid
+   * @property {string} did - Did of the created identity
+   * @property {string} privkey - PEM-encoded private key
+   * @property {string} metadata.cert - PEM-encoded certificate of the identity
+   */
+
+  /**
+   * Generates a new ephemeral identity, backed by a cert generated with forge.
    *
-   * @returns {Promise<{privkey: string, did: string}>} ssid-object, containing both the did and the authentication mechanism.
+   * @returns {Promise<EphemeralSsid>} ssid-object, containing both the did and the authentication mechanism.
    */
   async newIdentity (options = {}) {
     let keypair = forge.pki.rsa.generateKeyPair(2048)
-    let cert = options.cert ? forge.pki.certificateFromPem(options.cert) : this._createCert(keypair)
+    let cert = options.cert ? forge.pki.certificateFromPem(options.cert) : EphemeralConnector._createCert(keypair)
 
     let fingerprint = forge.pki.getPublicKeyFingerprint(cert.publicKey, {
       'encoding': 'hex'
@@ -84,7 +91,7 @@ class EphemeralConnector extends BaseConnector {
     }
   }
 
-  _createCert (keypair) {
+  static _createCert (keypair) {
     let cert = forge.pki.createCertificate()
 
     cert.publicKey = keypair.publicKey
@@ -189,12 +196,18 @@ class EphemeralConnector extends BaseConnector {
   }
 
   /**
+   * @typedef {Object} ClaimInfo
+   * @property {object} data - Data saved in the claim, can be an arbitrary object
+   * @property {string|null} previous - Link to the previous claim, null if the claim is the first
+   */
+
+  /**
    * Retrieve a claim by its link
    *
    * @param {string} link - Link to the claim
    * @param {string} did - Did that wants access
    * @param {string} privkey - Key of the did requesting access
-   * @returns {Promise<{data: object, previous: string}>} Object containing the data of the claim and a link to the
+   * @returns {Promise<ClaimInfo>} Object containing the data of the claim and a link to the
    * claim before it.
    */
   async get (link, did = null, privkey = null) {
@@ -256,13 +269,20 @@ class EphemeralConnector extends BaseConnector {
   }
 
   /**
+   * @typedef {object} ExtendedClaimInfo
+   * @property {ClaimInfo} claim - The actual claim
+   * @property {string} link - Link to this claim
+   * @property {string} did - Did that made the claim
+   */
+
+  /**
    * Observe claims being made in the connector
    *
    * @param {string} did - Only observe claims from this did
    * @param {object} claimFilter - Only observe claims that contain this data. If a value is null, claims with the key will be observed.
    * @param {string} accessorDid - Did requesting access
    * @param {string} accessorPrivkey - Private key of did requesting access
-   * @returns {Promise<{observable: Observable<{claim: {data: object, previous: string}, did: string}>, readyPromise: Promise<>}>} -
+   * @returns {Promise<{observable: Observable<ExtendedClaimInfo>, readyPromise: Promise<>}>} -
    * The observable can be subscribed to. The readyPromise signals that the observation has truly started.
    */
   async observe (did, claimFilter = {}, accessorDid = null, accessorPrivkey = null) {
