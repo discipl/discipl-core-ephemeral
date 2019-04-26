@@ -1,7 +1,8 @@
-import { decodeBase64, decodeUTF8, encodeUTF8 } from 'tweetnacl-util'
-import nacl from 'tweetnacl/nacl-fast'
 import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
+import forge from 'node-forge'
+import stringify from 'json-stable-stringify'
+import CryptoUtil from './CryptoUtil'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -10,11 +11,12 @@ class EphemeralStorage {
   constructor () {
     this.storage = {}
     this.claimOwners = {}
+    this.fingerprints = {}
     this.globalObservers = []
   }
 
   async claim (claim) {
-    let verification = this._verifySignature(claim)
+    let verification = await this._verifySignature(claim)
 
     if (verification !== true) {
       return null
@@ -36,9 +38,8 @@ class EphemeralStorage {
     this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'], 'access': [] }
     this.storage[publicKey]['last'] = claimId
 
-    let data = JSON.parse(encodeUTF8(decodeBase64(message)))
-    if (Object.keys(data).includes(BaseConnector.ALLOW) || claim.access) {
-      let access = data[BaseConnector.ALLOW] || claim.access
+    if (Object.keys(message).includes(BaseConnector.ALLOW) || claim.access) {
+      let access = message[BaseConnector.ALLOW] || claim.access
       let object = this.storage[publicKey]
 
       if (BaseConnector.isLink(access.scope) && this.claimOwners[BaseConnector.referenceFromLink(access.scope)] === publicKey) {
@@ -98,9 +99,8 @@ class EphemeralStorage {
 
   async get (claimId, accessorPubkey, accessorSignature) {
     if (accessorPubkey != null && accessorSignature != null) {
-      if (!nacl.sign.detached.verify(decodeBase64(claimId), decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
-        return null
-      }
+      let cert = await this.getCertForFingerprint(accessorPubkey)
+      CryptoUtil.verifySignature(claimId, accessorSignature, cert)
     }
 
     let publicKey = this.claimOwners[claimId]
@@ -128,13 +128,20 @@ class EphemeralStorage {
     return this.claimOwners[claimId]
   }
 
+  async storeCert (reference, cert) {
+    this.fingerprints[reference] = cert
+  }
+
+  async getCertForFingerprint (fingerprint) {
+    return this.fingerprints[fingerprint]
+  }
+
   async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     if (accessorPubkey != null && accessorSignature != null) {
-      let message = publicKey == null ? decodeUTF8('null') : decodeBase64(publicKey)
+      let message = publicKey == null ? 'null' : publicKey
 
-      if (!nacl.sign.detached.verify(message, decodeBase64(accessorSignature), decodeBase64(accessorPubkey))) {
-        throw new Error('Invalid authorization')
-      }
+      let cert = await this.getCertForFingerprint(accessorPubkey)
+      CryptoUtil.verifySignature(message, accessorSignature, cert)
     }
 
     let subject = new Subject()
@@ -153,9 +160,15 @@ class EphemeralStorage {
     return [subject, Promise.resolve()]
   }
 
-  _verifySignature (claim) {
+  async _verifySignature (claim) {
     if (claim.message != null && claim.signature != null && claim.publicKey != null) {
-      return nacl.sign.detached.verify(decodeBase64(claim.message), decodeBase64(claim.signature), decodeBase64(claim.publicKey))
+      let cert = await this.getCertForFingerprint(claim.publicKey)
+
+      const md = forge.md.sha256.create()
+      md.update(stringify(claim.message), 'utf8')
+      const data = md.digest().bytes()
+
+      return cert.publicKey.verify(data, forge.util.decode64(claim.signature))
     }
   }
 

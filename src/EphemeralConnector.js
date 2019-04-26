@@ -1,10 +1,9 @@
-import nacl from 'tweetnacl/nacl-fast'
-import { filter, map } from 'rxjs/operators'
-import { decodeBase64, decodeUTF8, encodeBase64, encodeUTF8 } from 'tweetnacl-util'
+import { filter, flatMap } from 'rxjs/operators'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
-import stringify from 'json-stable-stringify'
+import forge from 'node-forge'
+import CryptoUtil from './CryptoUtil'
 
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
@@ -62,14 +61,107 @@ class EphemeralConnector extends BaseConnector {
   }
 
   /**
-   * Generates a new ephemeral identity, backed by a keypair generated with tweetnacl.
-   *
-   * @returns {Promise<{privkey: string, did: string}>} ssid-object, containing both the did and the authentication mechanism.
+   * @typedef {Object} EphemeralSsid
+   * @property {string} did - Did of the created identity
+   * @property {string} privkey - PEM-encoded private key
+   * @property {string} metadata.cert - PEM-encoded certificate of the identity
    */
-  async newIdentity () {
-    let keypair = nacl.sign.keyPair()
 
-    return { 'did': this.didFromReference(encodeBase64(keypair.publicKey)), 'privkey': encodeBase64(keypair.secretKey) }
+  /**
+   * Generates a new ephemeral identity, backed by a cert generated with forge.
+   *
+   * @returns {Promise<EphemeralSsid>} ssid-object, containing both the did and the authentication mechanism.
+   */
+  async newIdentity (options = {}) {
+    let keypair = forge.pki.rsa.generateKeyPair(2048)
+    let cert = options.cert ? forge.pki.certificateFromPem(options.cert) : EphemeralConnector._createCert(keypair)
+
+    let fingerprint = forge.pki.getPublicKeyFingerprint(cert.publicKey, {
+      'encoding': 'hex'
+    })
+
+    await this.ephemeralClient.storeCert(fingerprint, cert)
+
+    return {
+      'did': this.didFromReference(fingerprint),
+      'privkey': options.privkey || forge.pki.privateKeyToPem(keypair.privateKey),
+      'metadata': {
+        'cert': forge.pki.certificateToPem(cert)
+      }
+    }
+  }
+
+  static _createCert (keypair) {
+    let cert = forge.pki.createCertificate()
+
+    cert.publicKey = keypair.publicKey
+    cert.serialNumber = '01'
+    cert.validity.notBefore = new Date()
+    cert.validity.notAfter = new Date()
+    cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1)
+    var attrs = [{
+      name: 'commonName',
+      value: 'example.org'
+    }, {
+      name: 'countryName',
+      value: 'US'
+    }, {
+      shortName: 'ST',
+      value: 'Virginia'
+    }, {
+      name: 'localityName',
+      value: 'Blacksburg'
+    }, {
+      name: 'organizationName',
+      value: 'Test'
+    }, {
+      shortName: 'OU',
+      value: 'Test'
+    }]
+    cert.setExtensions([{
+      name: 'basicConstraints',
+      cA: true
+    }, {
+      name: 'keyUsage',
+      keyCertSign: true,
+      digitalSignature: true,
+      nonRepudiation: true,
+      keyEncipherment: true,
+      dataEncipherment: true
+    }, {
+      name: 'extKeyUsage',
+      serverAuth: true,
+      clientAuth: true,
+      codeSigning: true,
+      emailProtection: true,
+      timeStamping: true
+    }, {
+      name: 'nsCertType',
+      client: true,
+      server: true,
+      email: true,
+      objsign: true,
+      sslCA: true,
+      emailCA: true,
+      objCA: true
+    }, {
+      name: 'subjectAltName',
+      altNames: [{
+        type: 6, // URI
+        value: 'http://example.org/webid#me'
+      }, {
+        type: 7, // IP
+        ip: '127.0.0.1'
+      }]
+    }, {
+      name: 'subjectKeyIdentifier'
+    }])
+
+    cert.setSubject(attrs)
+    cert.setIssuer(attrs)
+    cert.sign(keypair.privateKey)
+
+    return cert
   }
 
   /**
@@ -89,17 +181,25 @@ class EphemeralConnector extends BaseConnector {
    */
   async claim (did, privkey, data) {
     // Sort the keys to get the same message for the same data
-    let message = decodeUTF8(stringify(data))
-    let signature = nacl.sign.detached(message, decodeBase64(privkey))
+
+    let reference = BaseConnector.referenceFromDid(did)
+
+    let signature = CryptoUtil.sign(privkey, data)
 
     let claim = {
-      'message': encodeBase64(message),
-      'signature': encodeBase64(signature),
-      'publicKey': BaseConnector.referenceFromDid(did)
+      'message': data,
+      'signature': signature,
+      'publicKey': reference
     }
 
     return this.linkFromReference(await this.ephemeralClient.claim(claim))
   }
+
+  /**
+   * @typedef {Object} ClaimInfo
+   * @property {object} data - Data saved in the claim, can be an arbitrary object
+   * @property {string|null} previous - Link to the previous claim, null if the claim is the first
+   */
 
   /**
    * Retrieve a claim by its link
@@ -107,7 +207,7 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} link - Link to the claim
    * @param {string} did - Did that wants access
    * @param {string} privkey - Key of the did requesting access
-   * @returns {Promise<{data: object, previous: string}>} Object containing the data of the claim and a link to the
+   * @returns {Promise<ClaimInfo>} Object containing the data of the claim and a link to the
    * claim before it.
    */
   async get (link, did = null, privkey = null) {
@@ -116,7 +216,7 @@ class EphemeralConnector extends BaseConnector {
 
     let signature
     if (pubkey != null && privkey != null) {
-      signature = encodeBase64(nacl.sign.detached(decodeBase64(reference), decodeBase64(privkey)))
+      signature = CryptoUtil.sign(privkey, reference)
     }
 
     let result = await this.ephemeralClient.get(reference, pubkey, signature)
@@ -125,29 +225,20 @@ class EphemeralConnector extends BaseConnector {
       return null
     }
 
-    let publicKey = await this.ephemeralClient.getPublicKey(reference)
+    let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
 
-    let data = this._verifySignature(result.data, reference, publicKey)
+    let cert = await this.ephemeralClient.getCertForFingerprint(publicKeyFingerprint)
 
-    if (data == null) {
-      return null
-    }
+    CryptoUtil.verifySignature(result.data, reference, cert)
 
     return {
-      'data': data,
+      'data': result.data,
       'previous': this.linkFromReference(result.previous)
     }
   }
 
-  _verifySignature (data, signature, publicKey) {
-    if (data != null) {
-      let decodedData = decodeBase64(data)
-      if (nacl.sign.detached.verify(decodedData, decodeBase64(signature), decodeBase64(publicKey))) {
-        return JSON.parse(encodeUTF8(decodedData))
-      }
-    }
-
-    return null
+  async getCertFromReference (reference) {
+    return this.ephemeralClient.getCertForFingerprint(reference)
   }
 
   /**
@@ -162,9 +253,8 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<string>} - Link to the claim if successfully imported, null otherwise.
    */
   async import (did, link, data, importerDid = null) {
-    let message = encodeBase64(decodeUTF8(stringify(data)))
     let claim = {
-      'message': message,
+      'message': data,
       'signature': BaseConnector.referenceFromLink(link),
       'publicKey': BaseConnector.referenceFromDid(did)
     }
@@ -179,13 +269,20 @@ class EphemeralConnector extends BaseConnector {
   }
 
   /**
+   * @typedef {object} ExtendedClaimInfo
+   * @property {ClaimInfo} claim - The actual claim
+   * @property {string} link - Link to this claim
+   * @property {string} did - Did that made the claim
+   */
+
+  /**
    * Observe claims being made in the connector
    *
    * @param {string} did - Only observe claims from this did
    * @param {object} claimFilter - Only observe claims that contain this data. If a value is null, claims with the key will be observed.
    * @param {string} accessorDid - Did requesting access
    * @param {string} accessorPrivkey - Private key of did requesting access
-   * @returns {Promise<{observable: Observable<{claim: {data: object, previous: string}, did: string}>, readyPromise: Promise<>}>} -
+   * @returns {Promise<{observable: Observable<ExtendedClaimInfo>, readyPromise: Promise<>}>} -
    * The observable can be subscribed to. The readyPromise signals that the observation has truly started.
    */
   async observe (did, claimFilter = {}, accessorDid = null, accessorPrivkey = null) {
@@ -194,15 +291,17 @@ class EphemeralConnector extends BaseConnector {
 
     let signature = null
     if (accessorPubkey != null && accessorPrivkey != null) {
-      let message = pubkey == null ? decodeUTF8('null') : decodeBase64(pubkey)
-      signature = encodeBase64(nacl.sign.detached(message, decodeBase64(accessorPrivkey)))
+      let message = pubkey == null ? 'null' : pubkey
+      signature = CryptoUtil.sign(accessorPrivkey, message)
     }
 
     let [subject, readyPromise] = await this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
-    let processedSubject = subject.pipe(map(claim => {
-      claim['claim'].data = this._verifySignature(claim['claim'].data, claim['claim'].signature, claim.pubkey)
+    let processedSubject = subject.pipe(flatMap(async (claim) => {
+      let cert = await this.ephemeralClient.getCertForFingerprint(claim.pubkey)
+      CryptoUtil.verifySignature(claim['claim'].data, claim['claim'].signature, cert)
+
       if (claim['claim'].previous) {
         claim['claim'].previous = this.linkFromReference(claim['claim'].previous)
       }

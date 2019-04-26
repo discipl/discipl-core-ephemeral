@@ -1,6 +1,6 @@
 {
   "name": "@discipl/core-ephemeral",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Discipl Core Ephemeral Connector",
   "main": "dist/index.js",
   "module": "src/index.js",
@@ -26,9 +26,8 @@
     "axios": "^0.18.0",
     "express": "^4.16.4",
     "json-stable-stringify": "^1.0.1",
+    "node-forge": "^0.8.2",
     "rxjs": "^6.4.0",
-    "tweetnacl": "^1.0.1",
-    "tweetnacl-util": "^0.15.0",
     "ws": "^6.1.4"
   },
   "devDependencies": {
