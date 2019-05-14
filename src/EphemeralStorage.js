@@ -3,6 +3,7 @@ import { BaseConnector } from '@discipl/core-baseconnector'
 import forge from 'node-forge'
 import stringify from 'json-stable-stringify'
 import CryptoUtil from './CryptoUtil'
+import * as log from 'loglevel'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -13,12 +14,14 @@ class EphemeralStorage {
     this.claimOwners = {}
     this.fingerprints = {}
     this.globalObservers = []
+    this.logger = log.getLogger('EphemeralConnector')
   }
 
   async claim (claim) {
     let verification = await this._verifySignature(claim)
 
     if (verification !== true) {
+      this.logger.warn('Invalid signature on claim by pubkey', claim.publicKey)
       return null
     }
 
@@ -31,6 +34,7 @@ class EphemeralStorage {
     let claimId = signature
 
     if (Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
+      this.logger.info('Claim with id ', claimId, ' already existed')
       return claimId
     }
 
@@ -112,8 +116,11 @@ class EphemeralStorage {
         'signature': sourceClaim.signature,
         'previous': sourceClaim.previous
       }
+
       if (this._hasAccessTo(claimId, accessorPubkey)) {
         return claim
+      } else {
+        this.logger.warn('Entity with fingerprint', accessorPubkey, 'tried to access', claimId, 'and failed')
       }
     }
   }
@@ -172,19 +179,20 @@ class EphemeralStorage {
     }
   }
 
-  deleteKey (publicKey) {
-    delete this.storage[publicKey]
+  deleteKey (fingerprint) {
+    this.logger.info('Deleting information related to fingerprint', fingerprint)
+    delete this.storage[fingerprint]
     for (let claimIdOwner in Object.entries(this.claimOwners)) {
-      if (claimIdOwner[1] === publicKey) {
+      if (claimIdOwner[1] === fingerprint) {
         delete this.claimOwners[claimIdOwner[0]]
       }
     }
 
-    delete this.fingerprints[publicKey]
+    delete this.fingerprints[fingerprint]
 
     // Iterate backwards to prevent issues with modifying while looping
     for (let i = this.globalObservers.length - 1; i >= 0; i--) {
-      if (this.globalObservers[i].owner === publicKey) {
+      if (this.globalObservers[i].owner === fingerprint) {
         this.globalObservers.splice(i, 1)
       }
     }

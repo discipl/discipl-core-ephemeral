@@ -4,6 +4,7 @@ import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
 import forge from 'node-forge'
 import CryptoUtil from './CryptoUtil'
+import * as log from 'loglevel'
 
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
@@ -13,6 +14,7 @@ class EphemeralConnector extends BaseConnector {
   constructor () {
     super()
     this.ephemeralClient = new EphemeralStorage()
+    this.logger = log.getLogger('EphemeralConnector')
   }
 
   /**
@@ -32,9 +34,11 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} websocketEndpoint - EphemeralServer endpoint for websocket connections
    * @param {object} w3cwebsocket - W3C compatible WebSocket implementation. In the browser, this is window.WebSocket.
    * For node.js, the `websocket` npm package provides a compatible implementation.
+   * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info', 'valid'
    */
-  configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
+  configure (serverEndpoint, websocketEndpoint, w3cwebsocket, loglevel = 'warn') {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
+    this.logger.setLevel(loglevel)
   }
 
   /**
@@ -224,6 +228,7 @@ class EphemeralConnector extends BaseConnector {
     let result = await this.ephemeralClient.get(reference, pubkey, signature)
 
     if (!(result) || !(result.data)) {
+      this.logger.info('Could not find data for ', link)
       return null
     }
 
