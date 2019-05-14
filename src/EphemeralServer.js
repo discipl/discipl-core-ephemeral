@@ -16,7 +16,7 @@ class EphemeralServer {
     this.retentionTime = retentionTime
 
     // Set the interval to check at 1/10th of the retentionTime, such that we exceed retentionTime by at most 10%
-    setInterval(() => this.clean(), retentionTime * 100)
+    this.cleanInterval = setInterval(() => this.clean(), retentionTime * 100)
   }
 
   start () {
@@ -135,6 +135,7 @@ class EphemeralServer {
 
   close () {
     console.log('Stopping Ephemeral server')
+    clearInterval(this.cleanInterval)
     this.server.close()
     this.wss.close()
   }
