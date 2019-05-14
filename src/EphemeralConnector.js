@@ -11,10 +11,11 @@ import * as log from 'loglevel'
  * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
  */
 class EphemeralConnector extends BaseConnector {
-  constructor () {
+  constructor (loglevel = 'warn') {
     super()
     this.ephemeralClient = new EphemeralStorage()
     this.logger = log.getLogger('EphemeralConnector')
+    this.logger.setLevel(loglevel)
   }
 
   /**
@@ -37,9 +38,8 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info','debug' or 'trace' to
    * get more information
    */
-  configure (serverEndpoint, websocketEndpoint, w3cwebsocket, loglevel = 'warn') {
+  configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
-    this.logger.setLevel(loglevel)
   }
 
   /**

@@ -1,7 +1,5 @@
 import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
-import forge from 'node-forge'
-import stringify from 'json-stable-stringify'
 import CryptoUtil from './CryptoUtil'
 import * as log from 'loglevel'
 
@@ -168,15 +166,9 @@ class EphemeralStorage {
   }
 
   async _verifySignature (claim) {
-    if (claim.message != null && claim.signature != null && claim.publicKey != null) {
-      let cert = await this.getCertForFingerprint(claim.publicKey)
+    let cert = await this.getCertForFingerprint(claim.publicKey)
 
-      const md = forge.md.sha256.create()
-      md.update(stringify(claim.message), 'utf8')
-      const data = md.digest().bytes()
-
-      return cert.publicKey.verify(data, forge.util.decode64(claim.signature))
-    }
+    return CryptoUtil.verifySignature(claim.message, claim.signature, cert)
   }
 
   deleteIdentity (fingerprint) {
