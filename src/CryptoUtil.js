@@ -8,10 +8,6 @@ class CryptoUtil {
     return md
   }
 
-  static objectToDigestBytes (o) {
-    return this.objectToDigest(o).digest().bytes()
-  }
-
   static verifySignature (data, signature, cert) {
     if (data != null && signature != null && cert != null) {
       const digest = this.objectToDigest(data)
