@@ -121,7 +121,7 @@ class EphemeralServer {
 
     let errorCallback = (error) => {
       if (error != null && !error.message.includes('WebSocket is not open')) {
-        console.log('Error while sending ws message: ' + error)
+        this.logger.error('Error while sending ws message:', error)
       }
     }
 
