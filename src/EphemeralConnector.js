@@ -245,10 +245,6 @@ class EphemeralConnector extends BaseConnector {
     }
   }
 
-  async getCertFromReference (reference) {
-    return this.ephemeralClient.getCertForFingerprint(reference)
-  }
-
   /**
    * Imports a claim that was exported from another ephemeral connector.
    *
