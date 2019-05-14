@@ -34,7 +34,8 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} websocketEndpoint - EphemeralServer endpoint for websocket connections
    * @param {object} w3cwebsocket - W3C compatible WebSocket implementation. In the browser, this is window.WebSocket.
    * For node.js, the `websocket` npm package provides a compatible implementation.
-   * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info', 'valid'
+   * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info','debug' or 'trace' to
+   * get more information
    */
   configure (serverEndpoint, websocketEndpoint, w3cwebsocket, loglevel = 'warn') {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)

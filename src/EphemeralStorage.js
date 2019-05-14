@@ -182,8 +182,11 @@ class EphemeralStorage {
   deleteIdentity (fingerprint) {
     this.logger.info('Deleting information related to fingerprint', fingerprint)
     delete this.storage[fingerprint]
-    for (let claimIdOwner in Object.entries(this.claimOwners)) {
+
+    for (let claimIdOwner of Object.entries(this.claimOwners)) {
+      this.logger.debug('Checking if ', claimIdOwner, 'is owned by', fingerprint)
       if (claimIdOwner[1] === fingerprint) {
+        this.logger.debug('Deleting claimOwner entry for claimId', claimIdOwner[0])
         delete this.claimOwners[claimIdOwner[0]]
       }
     }

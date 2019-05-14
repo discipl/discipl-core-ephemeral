@@ -248,6 +248,23 @@ describe('discipl-ephemeral-connector', () => {
 
       expect(expiredClaim).to.equal(null)
     }).timeout(5000)
+
+    it('should remove observers of stale identities', async () => {
+      let ephemeralConnector = new EphemeralConnector()
+      ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
+
+      let identity = await ephemeralConnector.newIdentity()
+
+      let observeResult = await ephemeralConnector.observe(null, { 'some': 'filter' }, identity.did, identity.privkey)
+      observeResult.observable.subscribe(() => {}, () => {})
+      await observeResult.readyPromise
+
+      expect(ephemeralServer.storage.globalObservers).to.have.length(1)
+
+      await timeoutPromise(1500)
+
+      expect(ephemeralServer.storage.globalObservers).to.have.length(0)
+    }).timeout(5000)
   })
   describe('with a backend', () => {
     before(() => {
