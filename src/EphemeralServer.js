@@ -8,10 +8,15 @@ import forge from 'node-forge'
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
  */
 class EphemeralServer {
-  constructor (port) {
+  constructor (port, retentionTime = 24 * 3600) {
     this.port = port
     this.storage = new EphemeralStorage()
     this.websockets = {}
+    this.timestamps = {}
+    this.retentionTime = retentionTime
+
+    // Set the interval to check at 1/10th of the retentionTime, such that we exceed retentionTime by at most 10%
+    setInterval(() => this.clean(), retentionTime * 100)
   }
 
   start () {
@@ -37,6 +42,19 @@ class EphemeralServer {
     this.wss = wss
   }
 
+  clean () {
+    let now = new Date().getTime()
+    for (let entry of Object.entries(this.timestamps)) {
+      if (now - entry[1].getTime() > this.retentionTime * 1000) {
+        this.storage.deleteKey(entry[0])
+      }
+    }
+  }
+
+  ping (pubkey) {
+    this.timestamps[pubkey] = new Date()
+  }
+
   async claim (req, res) {
     // Protect against non-memory access injection
     if (req.body.access) {
@@ -44,6 +62,7 @@ class EphemeralServer {
     }
     try {
       let result = await this.storage.claim(req.body)
+      this.ping(req.body.publicKey)
       res.send(stringify(result))
     } catch (e) {
       res.status(401).send(e)
@@ -53,6 +72,8 @@ class EphemeralServer {
   async get (req, res) {
     try {
       let result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
+      this.ping(req.body.accessorPubkey)
+      this.ping(await this.storage.getPublicKey(req.body.claimId))
       res.send(result)
     } catch (e) {
       res.status(401).send(e)
@@ -61,20 +82,24 @@ class EphemeralServer {
 
   async getLatest (req, res) {
     res.send(await this.storage.getLatest(req.body.publicKey))
+    this.ping(req.body.accessorPubkey)
   }
 
   async getPublicKey (req, res) {
     let result = await this.storage.getPublicKey(req.body.claimId)
+    this.ping(result)
     res.send(result)
   }
 
   async storeCert (req, res) {
     await this.storage.storeCert(req.body.fingerprint, forge.pki.certificateFromPem(req.body.cert))
+    this.ping(req.body.fingerprint)
     res.sendStatus(200)
   }
 
   async getCert (req, res) {
     let result = await this.storage.getCertForFingerprint(req.body.fingerprint)
+    this.ping(req.body.fingerprint)
     res.send(forge.pki.certificateToPem(result))
   }
 
@@ -85,6 +110,9 @@ class EphemeralServer {
     }
 
     let observeResult = await this.storage.observe(req.body.scope, req.body.accessorPubkey, req.body.accessorSignature)
+
+    this.ping(req.body.accessorPubkey)
+    this.ping(req.body.scope)
 
     let subject = observeResult[0]
 

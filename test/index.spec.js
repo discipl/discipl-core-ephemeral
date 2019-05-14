@@ -16,6 +16,12 @@ let ephemeralServer
 const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
 const EPHEMERAL_WEBSOCKET_ENDPOINT = 'ws://localhost:3233'
 
+const timeoutPromise = (timeoutMillis) => {
+  return new Promise(function (resolve, reject) {
+    setTimeout(() => resolve(), timeoutMillis)
+  })
+}
+
 describe('discipl-ephemeral-connector', () => {
   describe('without a live server', () => {
     it('should present a name', async () => {
@@ -209,9 +215,43 @@ describe('discipl-ephemeral-connector', () => {
       expect(claim).to.equal(null)
     })
   })
+  describe('just in server mode', () => {
+    before(() => {
+      ephemeralServer = new EphemeralServer(3232, 1)
+      ephemeralServer.start()
+    })
+
+    after(() => {
+      ephemeralServer.close()
+    })
+
+    it('should remove stale identities', async () => {
+      let ephemeralConnector = new EphemeralConnector()
+      ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
+
+      let identity = await ephemeralConnector.newIdentity()
+
+      let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'THIS': 'WILL_DISAPPEAR' })
+
+      let claim = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
+
+      expect(claim).to.deep.equal({
+        'data': {
+          'THIS': 'WILL_DISAPPEAR'
+        },
+        'previous': null
+      })
+
+      await timeoutPromise(1500)
+
+      let expiredClaim = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
+
+      expect(expiredClaim).to.equal(null)
+    }).timeout(5000)
+  })
   describe('with a backend', () => {
     before(() => {
-      ephemeralServer = new EphemeralServer(3232)
+      ephemeralServer = new EphemeralServer(3232, 1)
       ephemeralServer.start()
     })
 

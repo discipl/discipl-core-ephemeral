@@ -172,6 +172,27 @@ class EphemeralStorage {
     }
   }
 
+  deleteKey (publicKey) {
+    delete this.storage[publicKey]
+    for (let claimIdOwner in Object.entries(this.claimOwners)) {
+      if (claimIdOwner[1] === publicKey) {
+        delete this.claimOwners[claimIdOwner[0]]
+      }
+    }
+
+    delete this.fingerprints[publicKey]
+
+    // Iterate backwards to prevent issues with modifying while looping
+    for (let i = this.globalObservers.length - 1; i >= 0; i--) {
+      if (this.globalObservers[i].owner === publicKey) {
+        this.globalObservers.splice(i, 1)
+      }
+    }
+
+    // Purposefully skip deleting the specific listeners, because iterating to them would take quite a lot of
+    // time and they will get deleted when the key being listened to is no longer used.
+  }
+
   _lazyInitStorage (publicKey) {
     if (!Object.keys(this.storage).includes(publicKey)) {
       this.storage[publicKey] = { 'claims': {}, 'last': null, 'observers': [], 'access': [] }
