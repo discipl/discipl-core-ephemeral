@@ -3,6 +3,7 @@ import ws from 'ws'
 import EphemeralStorage from './EphemeralStorage'
 import stringify from 'json-stable-stringify'
 import forge from 'node-forge'
+import * as log from 'loglevel'
 
 /**
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
@@ -14,6 +15,8 @@ class EphemeralServer {
     this.websockets = {}
     this.timestamps = {}
     this.retentionTime = retentionTime
+
+    this.logger = log.getLogger('EphemeralConnector')
 
     // Set the interval to check at 1/10th of the retentionTime, such that we exceed retentionTime by at most 10%
     this.cleanInterval = setInterval(() => this.clean(), retentionTime * 100)
@@ -30,7 +33,7 @@ class EphemeralServer {
     app.post('/getCert', (req, res) => this.getCert(req, res))
     app.post('/observe', (req, res) => this.observe(req, res))
 
-    this.server = app.listen(this.port, () => console.log(`Ephemeral server listening on ${this.port}!`))
+    this.server = app.listen(this.port, () => this.logger.info(`Ephemeral server listening on ${this.port}!`))
 
     let wss = new ws.Server({ 'port': this.port + 1 })
     wss.on('connection', (ws) => {
@@ -134,7 +137,7 @@ class EphemeralServer {
   }
 
   close () {
-    console.log('Stopping Ephemeral server')
+    this.logger.info('Stopping Ephemeral Server')
     clearInterval(this.cleanInterval)
     this.server.close()
     this.wss.close()
