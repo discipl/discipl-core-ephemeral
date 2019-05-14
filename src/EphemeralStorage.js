@@ -179,7 +179,7 @@ class EphemeralStorage {
     }
   }
 
-  deleteKey (fingerprint) {
+  deleteIdentity (fingerprint) {
     this.logger.info('Deleting information related to fingerprint', fingerprint)
     delete this.storage[fingerprint]
     for (let claimIdOwner in Object.entries(this.claimOwners)) {

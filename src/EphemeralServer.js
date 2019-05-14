@@ -49,7 +49,7 @@ class EphemeralServer {
     let now = new Date().getTime()
     for (let entry of Object.entries(this.timestamps)) {
       if (now - entry[1].getTime() > this.retentionTime * 1000) {
-        this.storage.deleteKey(entry[0])
+        this.storage.deleteIdentity(entry[0])
       }
     }
   }
