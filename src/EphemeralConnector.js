@@ -78,16 +78,21 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<EphemeralSsid>} ssid-object, containing both the did and the authentication mechanism.
    */
   async newIdentity (options = {}) {
-    let keypair = options.cert ? null : forge.pki.rsa.generateKeyPair(2048)
-    let cert = options.cert ? forge.pki.certificateFromPem(options.cert) : EphemeralConnector._createCert(keypair)
+    let keypair, cert, privkey
+    if (options.cert) {
+      cert = forge.pki.certificateFromPem(options.cert)
+      privkey = options.privkey ? options.privkey : null
+    } else {
+      keypair = forge.pki.rsa.generateKeyPair(2048)
+      cert = EphemeralConnector._createCert(keypair)
+      privkey = forge.pki.privateKeyToPem(keypair.privateKey)
+    }
 
     let fingerprint = forge.pki.getPublicKeyFingerprint(cert.publicKey, {
       'encoding': 'hex'
     })
 
     await this.ephemeralClient.storeCert(fingerprint, cert)
-
-    let privkey = options.cert ? (options.privkey ? options.privkey : null) : forge.pki.privateKeyToPem(keypair.privateKey)
 
     return {
       'did': this.didFromReference(fingerprint),
