@@ -1,8 +1,7 @@
 import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
-import forge from 'node-forge'
-import stringify from 'json-stable-stringify'
 import CryptoUtil from './CryptoUtil'
+import * as log from 'loglevel'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -13,12 +12,14 @@ class EphemeralStorage {
     this.claimOwners = {}
     this.fingerprints = {}
     this.globalObservers = []
+    this.logger = log.getLogger('EphemeralConnector')
   }
 
   async claim (claim) {
     let verification = await this._verifySignature(claim)
 
     if (verification !== true) {
+      this.logger.warn('Invalid signature on claim by pubkey', claim.publicKey)
       return null
     }
 
@@ -31,6 +32,7 @@ class EphemeralStorage {
     let claimId = signature
 
     if (Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
+      this.logger.info('Claim with id ', claimId, ' already existed')
       return claimId
     }
 
@@ -112,8 +114,11 @@ class EphemeralStorage {
         'signature': sourceClaim.signature,
         'previous': sourceClaim.previous
       }
+
       if (this._hasAccessTo(claimId, accessorPubkey)) {
         return claim
+      } else {
+        this.logger.warn('Entity with fingerprint', accessorPubkey, 'tried to access', claimId, 'and failed')
       }
     }
   }
@@ -161,15 +166,34 @@ class EphemeralStorage {
   }
 
   async _verifySignature (claim) {
-    if (claim.message != null && claim.signature != null && claim.publicKey != null) {
-      let cert = await this.getCertForFingerprint(claim.publicKey)
+    let cert = await this.getCertForFingerprint(claim.publicKey)
 
-      const md = forge.md.sha256.create()
-      md.update(stringify(claim.message), 'utf8')
-      const data = md.digest().bytes()
+    return CryptoUtil.verifySignature(claim.message, claim.signature, cert)
+  }
 
-      return cert.publicKey.verify(data, forge.util.decode64(claim.signature))
+  deleteIdentity (fingerprint) {
+    this.logger.info('Deleting information related to fingerprint', fingerprint)
+    delete this.storage[fingerprint]
+
+    for (let claimIdOwner of Object.entries(this.claimOwners)) {
+      this.logger.debug('Checking if ', claimIdOwner, 'is owned by', fingerprint)
+      if (claimIdOwner[1] === fingerprint) {
+        this.logger.debug('Deleting claimOwner entry for claimId', claimIdOwner[0])
+        delete this.claimOwners[claimIdOwner[0]]
+      }
     }
+
+    delete this.fingerprints[fingerprint]
+
+    // Iterate backwards to prevent issues with modifying while looping
+    for (let i = this.globalObservers.length - 1; i >= 0; i--) {
+      if (this.globalObservers[i].owner === fingerprint) {
+        this.globalObservers.splice(i, 1)
+      }
+    }
+
+    // Purposefully skip deleting the specific listeners, because iterating to them would take quite a lot of
+    // time and they will get deleted when the key being listened to is no longer used.
   }
 
   _lazyInitStorage (publicKey) {

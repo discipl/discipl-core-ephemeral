@@ -4,15 +4,18 @@ import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
 import forge from 'node-forge'
 import CryptoUtil from './CryptoUtil'
+import * as log from 'loglevel'
 
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
  * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
  */
 class EphemeralConnector extends BaseConnector {
-  constructor () {
+  constructor (loglevel = 'warn') {
     super()
     this.ephemeralClient = new EphemeralStorage()
+    this.logger = log.getLogger('EphemeralConnector')
+    this.logger.setLevel(loglevel)
   }
 
   /**
@@ -32,6 +35,8 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} websocketEndpoint - EphemeralServer endpoint for websocket connections
    * @param {object} w3cwebsocket - W3C compatible WebSocket implementation. In the browser, this is window.WebSocket.
    * For node.js, the `websocket` npm package provides a compatible implementation.
+   * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info','debug' or 'trace' to
+   * get more information
    */
   configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
@@ -73,16 +78,21 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<EphemeralSsid>} ssid-object, containing both the did and the authentication mechanism.
    */
   async newIdentity (options = {}) {
-    let keypair = options.cert ? null : forge.pki.rsa.generateKeyPair(2048)
-    let cert = options.cert ? forge.pki.certificateFromPem(options.cert) : EphemeralConnector._createCert(keypair)
+    let keypair, cert, privkey
+    if (options.cert) {
+      cert = forge.pki.certificateFromPem(options.cert)
+      privkey = options.privkey ? options.privkey : null
+    } else {
+      keypair = forge.pki.rsa.generateKeyPair(2048)
+      cert = EphemeralConnector._createCert(keypair)
+      privkey = forge.pki.privateKeyToPem(keypair.privateKey)
+    }
 
     let fingerprint = forge.pki.getPublicKeyFingerprint(cert.publicKey, {
       'encoding': 'hex'
     })
 
     await this.ephemeralClient.storeCert(fingerprint, cert)
-
-    let privkey = options.cert ? (options.privkey ? options.privkey : null) : forge.pki.privateKeyToPem(keypair.privateKey)
 
     return {
       'did': this.didFromReference(fingerprint),
@@ -224,6 +234,7 @@ class EphemeralConnector extends BaseConnector {
     let result = await this.ephemeralClient.get(reference, pubkey, signature)
 
     if (!(result) || !(result.data)) {
+      this.logger.info('Could not find data for ', link)
       return null
     }
 
@@ -237,10 +248,6 @@ class EphemeralConnector extends BaseConnector {
       'data': result.data,
       'previous': this.linkFromReference(result.previous)
     }
-  }
-
-  async getCertFromReference (reference) {
-    return this.ephemeralClient.getCertForFingerprint(reference)
   }
 
   /**

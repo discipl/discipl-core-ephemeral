@@ -3,15 +3,23 @@ import ws from 'ws'
 import EphemeralStorage from './EphemeralStorage'
 import stringify from 'json-stable-stringify'
 import forge from 'node-forge'
+import * as log from 'loglevel'
 
 /**
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
  */
 class EphemeralServer {
-  constructor (port) {
+  constructor (port, retentionTime = 24 * 3600) {
     this.port = port
     this.storage = new EphemeralStorage()
     this.websockets = {}
+    this.timestamps = {}
+    this.retentionTime = retentionTime
+
+    this.logger = log.getLogger('EphemeralConnector')
+
+    // Set the interval to check at 1/10th of the retentionTime, such that we exceed retentionTime by at most 10%
+    this.cleanInterval = setInterval(() => this.clean(), retentionTime * 100)
   }
 
   start () {
@@ -25,7 +33,7 @@ class EphemeralServer {
     app.post('/getCert', (req, res) => this.getCert(req, res))
     app.post('/observe', (req, res) => this.observe(req, res))
 
-    this.server = app.listen(this.port, () => console.log(`Ephemeral server listening on ${this.port}!`))
+    this.server = app.listen(this.port, () => this.logger.info(`Ephemeral server listening on ${this.port}!`))
 
     let wss = new ws.Server({ 'port': this.port + 1 })
     wss.on('connection', (ws) => {
@@ -37,6 +45,19 @@ class EphemeralServer {
     this.wss = wss
   }
 
+  clean () {
+    let now = new Date().getTime()
+    for (let entry of Object.entries(this.timestamps)) {
+      if (now - entry[1].getTime() > this.retentionTime * 1000) {
+        this.storage.deleteIdentity(entry[0])
+      }
+    }
+  }
+
+  ping (pubkey) {
+    this.timestamps[pubkey] = new Date()
+  }
+
   async claim (req, res) {
     // Protect against non-memory access injection
     if (req.body.access) {
@@ -44,6 +65,7 @@ class EphemeralServer {
     }
     try {
       let result = await this.storage.claim(req.body)
+      this.ping(req.body.publicKey)
       res.send(stringify(result))
     } catch (e) {
       res.status(401).send(e)
@@ -53,6 +75,8 @@ class EphemeralServer {
   async get (req, res) {
     try {
       let result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
+      this.ping(req.body.accessorPubkey)
+      this.ping(await this.storage.getPublicKey(req.body.claimId))
       res.send(result)
     } catch (e) {
       res.status(401).send(e)
@@ -61,20 +85,24 @@ class EphemeralServer {
 
   async getLatest (req, res) {
     res.send(await this.storage.getLatest(req.body.publicKey))
+    this.ping(req.body.accessorPubkey)
   }
 
   async getPublicKey (req, res) {
     let result = await this.storage.getPublicKey(req.body.claimId)
+    this.ping(result)
     res.send(result)
   }
 
   async storeCert (req, res) {
     await this.storage.storeCert(req.body.fingerprint, forge.pki.certificateFromPem(req.body.cert))
+    this.ping(req.body.fingerprint)
     res.sendStatus(200)
   }
 
   async getCert (req, res) {
     let result = await this.storage.getCertForFingerprint(req.body.fingerprint)
+    this.ping(req.body.fingerprint)
     res.send(forge.pki.certificateToPem(result))
   }
 
@@ -86,11 +114,14 @@ class EphemeralServer {
 
     let observeResult = await this.storage.observe(req.body.scope, req.body.accessorPubkey, req.body.accessorSignature)
 
+    this.ping(req.body.accessorPubkey)
+    this.ping(req.body.scope)
+
     let subject = observeResult[0]
 
     let errorCallback = (error) => {
       if (error != null && !error.message.includes('WebSocket is not open')) {
-        console.log('Error while sending ws message: ' + error)
+        this.logger.error('Error while sending ws message:', error)
       }
     }
 
@@ -106,7 +137,8 @@ class EphemeralServer {
   }
 
   close () {
-    console.log('Stopping Ephemeral server')
+    this.logger.info('Stopping Ephemeral Server')
+    clearInterval(this.cleanInterval)
     this.server.close()
     this.wss.close()
   }
