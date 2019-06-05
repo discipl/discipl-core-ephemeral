@@ -6,12 +6,13 @@ import forge from 'node-forge'
 import * as log from 'loglevel'
 import fs from 'fs'
 import https from 'https'
+import http from 'http'
 
 /**
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
  */
 class EphemeralServer {
-  constructor (port, certificatePath, privateKeyPath, retentionTime = 24 * 3600) {
+  constructor (port, certificatePath = null, privateKeyPath = null, retentionTime = 24 * 3600) {
     this.port = port
     this.storage = new EphemeralStorage()
     this.websockets = {}
@@ -21,6 +22,7 @@ class EphemeralServer {
     this.privateKeyPath = privateKeyPath
 
     this.logger = log.getLogger('EphemeralConnector')
+    this.logger.setLevel('debug')
 
     // Set the interval to check at 1/10th of the retentionTime, such that we exceed retentionTime by at most 10%
     this.cleanInterval = setInterval(() => this.clean(), retentionTime * 100)
@@ -37,10 +39,14 @@ class EphemeralServer {
     app.post('/getCert', (req, res) => this.getCert(req, res))
     app.post('/observe', (req, res) => this.observe(req, res))
 
-    this.server = https.createServer({
-      'key': fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
-      'cert': fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
-    }, app).listen(this.port, null, 511, () => this.logger.info(`Ephemeral server listening on ${this.port}!`))
+    if (this.certificatePath != null) {
+      this.server = https.createServer({
+        'key': fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
+        'cert': fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
+      }, app).listen(this.port, null, 511, () => this.logger.info(`Secure phemeral server listening on ${this.port}!`))
+    } else {
+      this.server = http.createServer(app).listen(this.port, null, 511, () => this.logger.info(`Insecure ephemeral server listening on ${this.port}!`))
+    }
 
     let wss = new ws.Server({ 'server': this.server })
     wss.on('connection', (ws) => {
