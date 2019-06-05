@@ -78,6 +78,7 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<EphemeralSsid>} ssid-object, containing both the did and the authentication mechanism.
    */
   async newIdentity (options = {}) {
+    this.logger.info('Creating new identity')
     let keypair, cert, privkey
     if (options.cert) {
       cert = forge.pki.certificateFromPem(options.cert)
@@ -92,8 +93,10 @@ class EphemeralConnector extends BaseConnector {
       'encoding': 'hex'
     })
 
+    this.logger.debug('Storing certificate')
     await this.ephemeralClient.storeCert(fingerprint, cert)
 
+    this.logger.info('Created new identity')
     return {
       'did': this.didFromReference(fingerprint),
       'privkey': privkey,
@@ -192,6 +195,7 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<string>} link - Link to the produced claim
    */
   async claim (did, privkey, data) {
+    log.info('Making a claim')
     // Sort the keys to get the same message for the same data
 
     let reference = BaseConnector.referenceFromDid(did)

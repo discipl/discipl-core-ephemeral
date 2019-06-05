@@ -4,17 +4,21 @@ import EphemeralStorage from './EphemeralStorage'
 import stringify from 'json-stable-stringify'
 import forge from 'node-forge'
 import * as log from 'loglevel'
+import fs from 'fs'
+import https from 'https'
 
 /**
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
  */
 class EphemeralServer {
-  constructor (port, retentionTime = 24 * 3600) {
+  constructor (port, certificatePath, privateKeyPath, retentionTime = 24 * 3600) {
     this.port = port
     this.storage = new EphemeralStorage()
     this.websockets = {}
     this.timestamps = {}
     this.retentionTime = retentionTime
+    this.certificatePath = certificatePath
+    this.privateKeyPath = privateKeyPath
 
     this.logger = log.getLogger('EphemeralConnector')
 
@@ -33,9 +37,12 @@ class EphemeralServer {
     app.post('/getCert', (req, res) => this.getCert(req, res))
     app.post('/observe', (req, res) => this.observe(req, res))
 
-    this.server = app.listen(this.port, () => this.logger.info(`Ephemeral server listening on ${this.port}!`))
+    this.server = https.createServer({
+      'key': fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
+      'cert': fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
+    }, app).listen(this.port, null, 511, () => this.logger.info(`Ephemeral server listening on ${this.port}!`))
 
-    let wss = new ws.Server({ 'port': this.port + 1 })
+    let wss = new ws.Server({ 'server': this.server })
     wss.on('connection', (ws) => {
       ws.on('message', (nonce) => {
         this.websockets[JSON.parse(nonce)] = ws
@@ -139,8 +146,8 @@ class EphemeralServer {
   close () {
     this.logger.info('Stopping Ephemeral Server')
     clearInterval(this.cleanInterval)
-    this.server.close()
     this.wss.close()
+    this.server.close()
   }
 }
 
