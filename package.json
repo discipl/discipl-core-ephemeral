@@ -1,6 +1,6 @@
 {
   "name": "@discipl/core-ephemeral",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Discipl Core Ephemeral Connector",
   "main": "dist/index.js",
   "module": "src/index.js",
@@ -22,28 +22,28 @@
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && ./node_modules/codecov/bin/codecov"
   },
   "dependencies": {
-    "@discipl/core-baseconnector": "^0.2.1",
-    "axios": "^0.18.0",
-    "express": "^4.16.4",
-    "json-stable-stringify": "^1.0.1",
-    "loglevel": "^1.6.1",
-    "node-forge": "^0.8.2",
-    "rxjs": "^6.4.0",
-    "ws": "^6.1.4"
+    "@discipl/core-baseconnector": "0.2.1",
+    "axios": "0.18.1",
+    "express": "4.17.1",
+    "json-stable-stringify": "1.0.1",
+    "loglevel": "1.6.2",
+    "node-forge": "0.8.4",
+    "rxjs": "6.5.2",
+    "ws": "6.2.1"
   },
   "devDependencies": {
-    "@babel/cli": "^7.2.3",
-    "@babel/core": "^7.3.4",
-    "@babel/preset-env": "^7.3.4",
-    "@babel/register": "^7.0.0",
-    "babel-eslint": "^10.0.1",
-    "chai": "^4.2.0",
-    "codecov": "^3.2.0",
-    "eslint": "^5.14.1",
-    "mocha": "^5.2.0",
-    "nyc": "^13.3.0",
-    "sinon": "^7.2.5",
-    "standard": "^12.0.1",
-    "websocket": "^1.0.28"
+    "@babel/cli": "7.4.4",
+    "@babel/core": "7.4.5",
+    "@babel/preset-env": "7.4.5",
+    "@babel/register": "7.4.4",
+    "babel-eslint": "10.0.1",
+    "chai": "4.2.0",
+    "codecov": "3.5.0",
+    "eslint": "5.16.0",
+    "mocha": "5.2.0",
+    "nyc": "14.1.1",
+    "sinon": "7.3.2",
+    "standard": "12.0.1",
+    "websocket": "1.0.28"
   }
 }

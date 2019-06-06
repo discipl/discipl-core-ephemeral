@@ -6,8 +6,9 @@ addons:
     organization: "discipl" # the key of the org you chose at step #3
 script:
   - npm run lint
-  - npm test
-  # other script steps might be done before running the actual analysis
+  - npm audit
+  # for test purposes, we ignore the fact that the certificate is self-signed
+  - NODE_TLS_REJECT_UNAUTHORIZED=0 npm test
 
 after_success:
   - npm run coverage

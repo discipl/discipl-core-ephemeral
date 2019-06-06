@@ -12,9 +12,15 @@ import { w3cwebsocket } from 'websocket'
 import { BaseConnector } from '@discipl/core-baseconnector'
 
 let ephemeralServer
+let insecureServer
 
-const EPHEMERAL_ENDPOINT = 'http://localhost:3232'
-const EPHEMERAL_WEBSOCKET_ENDPOINT = 'ws://localhost:3233'
+const EPHEMERAL_ENDPOINT = 'https://localhost:3232'
+const EPHEMERAL_WEBSOCKET_ENDPOINT = 'wss://localhost:3232'
+const INSECURE_ENDPOINT = 'http://localhost:3234'
+const INSECURE_WEBSOCKET_ENDPOINT = 'ws://localhost:3234'
+
+const CERT_PATH = './test/certs/org.crt'
+const KEY_PATH = './test/certs/org.key'
 
 const timeoutPromise = (timeoutMillis) => {
   return new Promise(function (resolve, reject) {
@@ -217,7 +223,7 @@ describe('discipl-ephemeral-connector', () => {
   })
   describe('just in server mode', () => {
     before(() => {
-      ephemeralServer = new EphemeralServer(3232, 1)
+      ephemeralServer = new EphemeralServer(3232, CERT_PATH, KEY_PATH, 1)
       ephemeralServer.start()
     })
 
@@ -268,12 +274,15 @@ describe('discipl-ephemeral-connector', () => {
   })
   describe('with a backend', () => {
     before(() => {
-      ephemeralServer = new EphemeralServer(3232)
+      ephemeralServer = new EphemeralServer(3232, CERT_PATH, KEY_PATH)
       ephemeralServer.start()
+      insecureServer = new EphemeralServer(3234, null, null, 1)
+      insecureServer.start()
     })
 
     after(() => {
       ephemeralServer.close()
+      insecureServer.close()
     })
 
     let backends = [
@@ -286,6 +295,14 @@ describe('discipl-ephemeral-connector', () => {
         'createConnector': () => {
           let ephemeralConnector = new EphemeralConnector()
           ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
+          return ephemeralConnector
+        }
+      },
+      {
+        'description': 'in an insecure server',
+        'createConnector': () => {
+          let ephemeralConnector = new EphemeralConnector()
+          ephemeralConnector.configure(INSECURE_ENDPOINT, INSECURE_WEBSOCKET_ENDPOINT, w3cwebsocket)
           return ephemeralConnector
         }
       }
