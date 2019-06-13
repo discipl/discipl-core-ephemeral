@@ -6,6 +6,9 @@ import forge from 'node-forge'
 import CryptoUtil from './CryptoUtil'
 import * as log from 'loglevel'
 
+const CRT_PREFIX = 'crt:'
+const EC_PREFIX = 'ec:'
+
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
  * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
@@ -79,17 +82,27 @@ class EphemeralConnector extends BaseConnector {
    */
   async newIdentity (options = {}) {
     this.logger.info('Creating new identity')
-    let keypair, cert, privkey
     if (options.cert) {
-      cert = forge.pki.certificateFromPem(options.cert)
-      privkey = options.privkey ? options.privkey : null
-    } else {
-      keypair = forge.pki.rsa.generateKeyPair(2048)
-      cert = EphemeralConnector._createCert(keypair)
-      privkey = forge.pki.privateKeyToPem(keypair.privateKey)
+      return this._importIdentity(options)
     }
 
-    let fingerprint = forge.pki.getPublicKeyFingerprint(cert.publicKey, {
+    let keypair = forge.pki.ed25519.generateKeyPair()
+
+    let reference = EC_PREFIX + keypair.publicKey.toString('base64')
+
+    return {
+      'did': this.didFromReference(reference),
+      'privkey': keypair.privateKey,
+      'metadata': {
+      }
+    }
+  }
+
+  async _importIdentity (options) {
+    let cert = forge.pki.certificateFromPem(options.cert)
+    let privkey = options.privkey ? options.privkey : null
+
+    let fingerprint = CRT_PREFIX + forge.pki.getPublicKeyFingerprint(cert.publicKey, {
       'encoding': 'hex'
     })
 
