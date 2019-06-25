@@ -40,9 +40,8 @@ describe('discipl-ephemeral-connector', () => {
       let identity = await ephemeralConnector.newIdentity()
 
       expect(identity.did).to.be.a('string')
-      expect(identity.did.length).to.equal(62)
-      expect(identity.privkey).to.be.a('string')
-      expect(identity.privkey.length).to.be.above(1700)
+      expect(identity.did.length).to.equal(69)
+      expect(identity.privkey.length).to.equal(64)
     })
 
     it('should be able to import an identity with a public key', async () => {
@@ -86,7 +85,7 @@ describe('discipl-ephemeral-connector', () => {
       let identity = await ephemeralConnector.newIdentity({ 'cert': cert })
 
       expect(identity).to.deep.equal({
-        'did': 'did:discipl:ephemeral:aadf2a1b0c91d6d24edfc8a3d788572362dd6ba4',
+        'did': 'did:discipl:ephemeral:crt:aadf2a1b0c91d6d24edfc8a3d788572362dd6ba4',
         'metadata': {
           'cert': cert
         },
@@ -94,7 +93,7 @@ describe('discipl-ephemeral-connector', () => {
       })
     })
 
-    it('should be able to import an identity with a public and private key', async () => {
+    it('should be able to import an identity with a public and private key and claim something', async () => {
       let cert = '-----BEGIN CERTIFICATE-----\r\n' +
         'MIIGGzCCBAOgAwIBAgIUDqjzvfWzZ7dyHuIBerf5m/N09qMwDQYJKoZIhvcNAQEL\r\n' +
         'BQAwgZwxCzAJBgNVBAYTAk5MMRUwEwYDVQQIDAxadWlkLUhvbGxhbmQxETAPBgNV\r\n' +
@@ -188,11 +187,26 @@ describe('discipl-ephemeral-connector', () => {
       let identity = await ephemeralConnector.newIdentity({ 'cert': cert, 'privkey': key })
 
       expect(identity).to.deep.equal({
-        'did': 'did:discipl:ephemeral:aadf2a1b0c91d6d24edfc8a3d788572362dd6ba4',
+        'did': 'did:discipl:ephemeral:crt:aadf2a1b0c91d6d24edfc8a3d788572362dd6ba4',
         'metadata': {
           'cert': cert
         },
         'privkey': key
+      })
+
+      let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+
+      await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
+      expect(claimLink).to.be.a('string')
+
+      let claim = await ephemeralConnector.get(claimLink, identity)
+
+      expect(claim).to.deep.equal({
+        'data': {
+          'need': 'beer'
+        },
+        'previous': null
       })
     })
 
@@ -319,7 +333,7 @@ describe('discipl-ephemeral-connector', () => {
           await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
 
           expect(claimLink).to.be.a('string')
-          expect(claimLink.length).to.equal(367)
+          expect(claimLink.length).to.equal(111)
 
           let claim = await ephemeralConnector.get(claimLink)
 

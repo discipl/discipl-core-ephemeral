@@ -18,8 +18,8 @@ class CryptoUtil {
     if (typeof cert === 'string' && cert.startsWith(EC_PREFIX)) {
       return forge.pki.ed25519.verify({
         'md': CryptoUtil.objectToDigest(data),
-        'signature': forge.util.decode64(signature),
-        'publicKey': forge.util.createBuffer(cert.replace(EC_PREFIX, ''), 'base64')
+        'signature': Buffer.from(signature, 'base64'),
+        'publicKey': Buffer.from(cert.replace(EC_PREFIX, ''), 'base64')
       })
     }
 
@@ -27,7 +27,7 @@ class CryptoUtil {
       const digest = this.objectToDigest(data)
       CryptoUtil.getLogger().trace('Verifying on digest', digest.digest().toHex())
       CryptoUtil.getLogger().trace('Verifying on signature', signature)
-      return cert.publicKey.verify(digest.digest().bytes(), forge.util.encode64(signature))
+      return cert.publicKey.verify(digest.digest().bytes(), forge.util.decode64(signature, 'base64'))
     }
   }
 
@@ -40,14 +40,13 @@ class CryptoUtil {
       return forge.util.encode64(privateKey.sign(md))
     } else {
       let md = CryptoUtil.objectToDigest(data)
-      console.log('private key', privateKeyPem)
 
       let signature = forge.pki.ed25519.sign({
         'md': md,
         'privateKey': privateKeyPem
       })
 
-      return forge.util.decode64(signature)
+      return signature.toString('base64')
     }
   }
 }
