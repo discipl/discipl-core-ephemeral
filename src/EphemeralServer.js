@@ -43,7 +43,7 @@ class EphemeralServer {
       this.server = https.createServer({
         'key': fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
         'cert': fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
-      }, app).listen(this.port, null, 511, () => this.logger.info(`Secure phemeral server listening on ${this.port}!`))
+      }, app).listen(this.port, null, 511, () => this.logger.info(`Secure ephemeral server listening on ${this.port}!`))
     } else {
       this.server = http.createServer(app).listen(this.port, null, 511, () => this.logger.info(`Insecure ephemeral server listening on ${this.port}!`))
     }

@@ -1,7 +1,7 @@
 import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
-import CryptoUtil from './CryptoUtil'
 import * as log from 'loglevel'
+import IdentityFactory from './crypto/IdentityFactory'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -13,6 +13,9 @@ class EphemeralStorage {
     this.fingerprints = {}
     this.globalObservers = []
     this.logger = log.getLogger('EphemeralConnector')
+
+    this.identityFactory = new IdentityFactory()
+    this.identityFactory.setClient(this)
   }
 
   async claim (claim) {
@@ -101,8 +104,8 @@ class EphemeralStorage {
 
   async get (claimId, accessorPubkey, accessorSignature) {
     if (accessorPubkey != null && accessorSignature != null) {
-      let cert = await this.getCertForFingerprint(accessorPubkey)
-      CryptoUtil.verifySignature(claimId, accessorSignature, cert)
+      let identity = await this.identityFactory.fromReference(accessorPubkey)
+      identity.verify(claimId, accessorSignature)
     }
 
     let publicKey = this.claimOwners[claimId]
@@ -145,8 +148,8 @@ class EphemeralStorage {
     if (accessorPubkey != null && accessorSignature != null) {
       let message = publicKey == null ? 'null' : publicKey
 
-      let cert = await this.getCertForFingerprint(accessorPubkey)
-      CryptoUtil.verifySignature(message, accessorSignature, cert)
+      let identity = await this.identityFactory.fromReference(accessorPubkey)
+      identity.verify(message, accessorSignature)
     }
 
     let subject = new Subject()
@@ -166,9 +169,8 @@ class EphemeralStorage {
   }
 
   async _verifySignature (claim) {
-    let cert = await this.getCertForFingerprint(claim.publicKey)
-
-    return CryptoUtil.verifySignature(claim.message, claim.signature, cert)
+    let identity = await this.identityFactory.fromReference(claim.publicKey)
+    return identity.verify(claim.message, claim.signature)
   }
 
   deleteIdentity (fingerprint) {

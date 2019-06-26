@@ -1,7 +1,6 @@
 import axios from 'axios'
 import { WebSocketSubject } from 'rxjs/webSocket'
 import forge from 'node-forge'
-
 /**
  * The EphemeralClient is responsible for communicating to the server. Its interface matches that
  * of the EphemeralStorage, such that one is a drop-in replacement for the other.

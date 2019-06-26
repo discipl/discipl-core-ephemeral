@@ -2,9 +2,9 @@ import { filter, flatMap } from 'rxjs/operators'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
-import forge from 'node-forge'
-import CryptoUtil from './CryptoUtil'
+
 import * as log from 'loglevel'
+import IdentityFactory from './crypto/IdentityFactory'
 
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
@@ -16,6 +16,8 @@ class EphemeralConnector extends BaseConnector {
     this.ephemeralClient = new EphemeralStorage()
     this.logger = log.getLogger('EphemeralConnector')
     this.logger.setLevel(loglevel)
+    this.identityFactory = new IdentityFactory()
+    this.identityFactory.setConnector(this)
   }
 
   /**
@@ -79,104 +81,12 @@ class EphemeralConnector extends BaseConnector {
    */
   async newIdentity (options = {}) {
     this.logger.info('Creating new identity')
-    let keypair, cert, privkey
     if (options.cert) {
-      cert = forge.pki.certificateFromPem(options.cert)
-      privkey = options.privkey ? options.privkey : null
-    } else {
-      keypair = forge.pki.rsa.generateKeyPair(2048)
-      cert = EphemeralConnector._createCert(keypair)
-      privkey = forge.pki.privateKeyToPem(keypair.privateKey)
+      let identity = await this.identityFactory.fromCert(options.cert, options.privkey)
+      return identity.ssid
     }
-
-    let fingerprint = forge.pki.getPublicKeyFingerprint(cert.publicKey, {
-      'encoding': 'hex'
-    })
-
-    this.logger.debug('Storing certificate')
-    await this.ephemeralClient.storeCert(fingerprint, cert)
-
-    this.logger.info('Created new identity')
-    return {
-      'did': this.didFromReference(fingerprint),
-      'privkey': privkey,
-      'metadata': {
-        'cert': forge.pki.certificateToPem(cert)
-      }
-    }
-  }
-
-  static _createCert (keypair) {
-    let cert = forge.pki.createCertificate()
-
-    cert.publicKey = keypair.publicKey
-    cert.serialNumber = '01'
-    cert.validity.notBefore = new Date()
-    cert.validity.notAfter = new Date()
-    cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1)
-    var attrs = [{
-      name: 'commonName',
-      value: 'example.org'
-    }, {
-      name: 'countryName',
-      value: 'US'
-    }, {
-      shortName: 'ST',
-      value: 'Virginia'
-    }, {
-      name: 'localityName',
-      value: 'Blacksburg'
-    }, {
-      name: 'organizationName',
-      value: 'Test'
-    }, {
-      shortName: 'OU',
-      value: 'Test'
-    }]
-    cert.setExtensions([{
-      name: 'basicConstraints',
-      cA: true
-    }, {
-      name: 'keyUsage',
-      keyCertSign: true,
-      digitalSignature: true,
-      nonRepudiation: true,
-      keyEncipherment: true,
-      dataEncipherment: true
-    }, {
-      name: 'extKeyUsage',
-      serverAuth: true,
-      clientAuth: true,
-      codeSigning: true,
-      emailProtection: true,
-      timeStamping: true
-    }, {
-      name: 'nsCertType',
-      client: true,
-      server: true,
-      email: true,
-      objsign: true,
-      sslCA: true,
-      emailCA: true,
-      objCA: true
-    }, {
-      name: 'subjectAltName',
-      altNames: [{
-        type: 6, // URI
-        value: 'http://example.org/webid#me'
-      }, {
-        type: 7, // IP
-        ip: '127.0.0.1'
-      }]
-    }, {
-      name: 'subjectKeyIdentifier'
-    }])
-
-    cert.setSubject(attrs)
-    cert.setIssuer(attrs)
-    cert.sign(keypair.privateKey)
-
-    return cert
+    let identity = await this.identityFactory.newIdentity()
+    return identity.ssid
   }
 
   /**
@@ -200,7 +110,8 @@ class EphemeralConnector extends BaseConnector {
 
     let reference = BaseConnector.referenceFromDid(did)
 
-    let signature = CryptoUtil.sign(privkey, data)
+    let identity = await this.identityFactory.fromDid(did, privkey)
+    let signature = identity.sign(data)
 
     let claim = {
       'message': data,
@@ -232,7 +143,8 @@ class EphemeralConnector extends BaseConnector {
 
     let signature
     if (pubkey != null && privkey != null) {
-      signature = CryptoUtil.sign(privkey, reference)
+      let identity = await this.identityFactory.fromDid(did, privkey)
+      signature = identity.sign(reference)
     }
 
     let result = await this.ephemeralClient.get(reference, pubkey, signature)
@@ -244,9 +156,9 @@ class EphemeralConnector extends BaseConnector {
 
     let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
 
-    let cert = await this.ephemeralClient.getCertForFingerprint(publicKeyFingerprint)
-
-    CryptoUtil.verifySignature(result.data, reference, cert)
+    this.logger.debug('Retrieved fingerprint', publicKeyFingerprint)
+    let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
+    identity.verify(result.data, reference)
 
     return {
       'data': result.data,
@@ -305,15 +217,16 @@ class EphemeralConnector extends BaseConnector {
     let signature = null
     if (accessorPubkey != null && accessorPrivkey != null) {
       let message = pubkey == null ? 'null' : pubkey
-      signature = CryptoUtil.sign(accessorPrivkey, message)
+      let identity = await this.identityFactory.fromDid(accessorDid, accessorPrivkey)
+      signature = identity.sign(message)
     }
 
     let [subject, readyPromise] = await this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(flatMap(async (claim) => {
-      let cert = await this.ephemeralClient.getCertForFingerprint(claim.pubkey)
-      CryptoUtil.verifySignature(claim['claim'].data, claim['claim'].signature, cert)
+      let identity = await this.identityFactory.fromReference(claim.pubkey)
+      identity.verify(claim['claim'].data, claim['claim'].signature)
 
       if (claim['claim'].previous) {
         claim['claim'].previous = this.linkFromReference(claim['claim'].previous)
