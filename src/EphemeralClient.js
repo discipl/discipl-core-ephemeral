@@ -1,9 +1,6 @@
 import axios from 'axios'
 import { WebSocketSubject } from 'rxjs/webSocket'
 import forge from 'node-forge'
-
-const EC_PREFIX = 'ec:'
-
 /**
  * The EphemeralClient is responsible for communicating to the server. Its interface matches that
  * of the EphemeralStorage, such that one is a drop-in replacement for the other.
@@ -38,10 +35,6 @@ class EphemeralClient {
   }
 
   async getCertForFingerprint (fingerprint) {
-    if (fingerprint.startsWith(EC_PREFIX)) {
-      return fingerprint
-    }
-
     let response = await axios.post(this.serverEndpoint + '/getCert', { 'fingerprint': fingerprint })
 
     return forge.pki.certificateFromPem(response.data)

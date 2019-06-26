@@ -3,8 +3,6 @@ import { BaseConnector } from '@discipl/core-baseconnector'
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
 
-const EC_PREFIX = 'ec:'
-
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
  */
@@ -143,9 +141,6 @@ class EphemeralStorage {
   }
 
   async getCertForFingerprint (fingerprint) {
-    if (fingerprint.startsWith(EC_PREFIX)) {
-      return fingerprint
-    }
     return this.fingerprints[fingerprint]
   }
 
