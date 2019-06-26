@@ -1,5 +1,5 @@
 import forge from 'node-forge'
-import CryptoUtil from '../CryptoUtil'
+import CryptoUtil from './CryptoUtil'
 const EC_PREFIX = 'ec:'
 
 class EdDSAIdentity {
@@ -33,6 +33,14 @@ class EdDSAIdentity {
     })
 
     return signature.toString('base64')
+  }
+
+  verify (data, signature) {
+    return forge.pki.ed25519.verify({
+      'md': CryptoUtil.objectToDigest(data),
+      'signature': Buffer.from(signature, 'base64'),
+      'publicKey': this.keypair.publicKey
+    })
   }
 }
 

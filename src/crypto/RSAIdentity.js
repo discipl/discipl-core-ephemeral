@@ -1,6 +1,6 @@
 import forge from 'node-forge'
 import * as log from 'loglevel'
-import CryptoUtil from '../CryptoUtil'
+import CryptoUtil from './CryptoUtil'
 
 const CRT_PREFIX = 'crt:'
 
@@ -29,6 +29,11 @@ class RSAIdentity {
 
     const md = CryptoUtil.objectToDigest(data)
     return forge.util.encode64(privateKey.sign(md))
+  }
+
+  verify (data, signature) {
+    const digest = CryptoUtil.objectToDigest(data)
+    return this.cert.publicKey.verify(digest.digest().bytes(), forge.util.decode64(signature, 'base64'))
   }
 }
 

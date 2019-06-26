@@ -3,7 +3,6 @@ import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
 
-import CryptoUtil from './CryptoUtil'
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
 
@@ -17,7 +16,8 @@ class EphemeralConnector extends BaseConnector {
     this.ephemeralClient = new EphemeralStorage()
     this.logger = log.getLogger('EphemeralConnector')
     this.logger.setLevel(loglevel)
-    this.identityFactory = new IdentityFactory(this)
+    this.identityFactory = new IdentityFactory()
+    this.identityFactory.setConnector(this)
   }
 
   /**
@@ -156,9 +156,9 @@ class EphemeralConnector extends BaseConnector {
 
     let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
 
-    let cert = await this.ephemeralClient.getCertForFingerprint(publicKeyFingerprint)
-
-    CryptoUtil.verifySignature(result.data, reference, cert)
+    this.logger.debug('Retrieved fingerprint', publicKeyFingerprint)
+    let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
+    identity.verify(result.data, reference)
 
     return {
       'data': result.data,
@@ -225,8 +225,8 @@ class EphemeralConnector extends BaseConnector {
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     let processedSubject = subject.pipe(flatMap(async (claim) => {
-      let cert = await this.ephemeralClient.getCertForFingerprint(claim.pubkey)
-      CryptoUtil.verifySignature(claim['claim'].data, claim['claim'].signature, cert)
+      let identity = await this.identityFactory.fromReference(claim.pubkey)
+      identity.verify(claim['claim'].data, claim['claim'].signature)
 
       if (claim['claim'].previous) {
         claim['claim'].previous = this.linkFromReference(claim['claim'].previous)
