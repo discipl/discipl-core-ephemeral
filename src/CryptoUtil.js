@@ -30,25 +30,6 @@ class CryptoUtil {
       return cert.publicKey.verify(digest.digest().bytes(), forge.util.decode64(signature, 'base64'))
     }
   }
-
-  static sign (privateKeyPem, data) {
-    if (typeof privateKeyPem === 'string') {
-      let privateKey = forge.pki.privateKeyFromPem(privateKeyPem)
-
-      const md = CryptoUtil.objectToDigest(data)
-      CryptoUtil.getLogger().trace('Signing on digest', md.digest().toHex())
-      return forge.util.encode64(privateKey.sign(md))
-    } else {
-      let md = CryptoUtil.objectToDigest(data)
-
-      let signature = forge.pki.ed25519.sign({
-        'md': md,
-        'privateKey': privateKeyPem
-      })
-
-      return signature.toString('base64')
-    }
-  }
 }
 
 export default CryptoUtil
