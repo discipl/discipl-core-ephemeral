@@ -6,18 +6,21 @@ import EphemeralStorage from './EphemeralStorage'
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
 
+import NodeCache from 'node-cache'
+
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
  * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
  */
 class EphemeralConnector extends BaseConnector {
-  constructor (loglevel = 'warn') {
+  constructor(loglevel = 'warn') {
     super()
     this.ephemeralClient = new EphemeralStorage()
     this.logger = log.getLogger('EphemeralConnector')
     this.logger.setLevel(loglevel)
     this.identityFactory = new IdentityFactory()
     this.identityFactory.setConnector(this)
+    this.myCache = new NodeCache()
   }
 
   /**
@@ -25,7 +28,7 @@ class EphemeralConnector extends BaseConnector {
    *
    * @returns {string} The string 'ephemeral'.
    */
-  getName () {
+  getName() {
     return 'ephemeral'
   }
 
@@ -40,7 +43,7 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info','debug' or 'trace' to
    * get more information
    */
-  configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
+  configure(serverEndpoint, websocketEndpoint, w3cwebsocket) {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
   }
 
@@ -52,7 +55,7 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} link - Link to the claim
    * @returns {Promise<string>} Did that made this claim
    */
-  async getDidOfClaim (link) {
+  async getDidOfClaim(link) {
     let reference = BaseConnector.referenceFromLink(link)
     return this.didFromReference(await this.ephemeralClient.getPublicKey(reference))
   }
@@ -63,7 +66,7 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} did
    * @returns {Promise<string>} Link to the last claim made by this did
    */
-  async getLatestClaim (did) {
+  async getLatestClaim(did) {
     return this.linkFromReference(await this.ephemeralClient.getLatest(BaseConnector.referenceFromDid(did)))
   }
 
@@ -79,7 +82,7 @@ class EphemeralConnector extends BaseConnector {
    *
    * @returns {Promise<EphemeralSsid>} ssid-object, containing both the did and the authentication mechanism.
    */
-  async newIdentity (options = {}) {
+  async newIdentity(options = {}) {
     this.logger.info('Creating new identity')
     if (options.cert) {
       let identity = await this.identityFactory.fromCert(options.cert, options.privkey)
@@ -104,7 +107,7 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} [data.DISCIPL_ALLOW.did] - Did that is allowed access. If not present, everyone is allowed.
    * @returns {Promise<string>} link - Link to the produced claim
    */
-  async claim (did, privkey, data) {
+  async claim(did, privkey, data) {
     log.info('Making a claim')
     // Sort the keys to get the same message for the same data
 
@@ -137,32 +140,39 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<ClaimInfo>} Object containing the data of the claim and a link to the
    * claim before it.
    */
-  async get (link, did = null, privkey = null) {
-    let reference = BaseConnector.referenceFromLink(link)
-    let pubkey = BaseConnector.referenceFromDid(did)
+  async get(link, did = null, privkey = null) {
+    try {
+      let retrievedObjFromCache = this.myCache.get(link, true)
+      return retrievedObjFromCache
+    } catch (err) {
+      let reference = BaseConnector.referenceFromLink(link)
+      let pubkey = BaseConnector.referenceFromDid(did)
 
-    let signature
-    if (pubkey != null && privkey != null) {
-      let identity = await this.identityFactory.fromDid(did, privkey)
-      signature = identity.sign(reference)
-    }
+      let signature
+      if (pubkey != null && privkey != null) {
+        let identity = await this.identityFactory.fromDid(did, privkey)
+        signature = identity.sign(reference)
+      }
 
-    let result = await this.ephemeralClient.get(reference, pubkey, signature)
+      let result = await this.ephemeralClient.get(reference, pubkey, signature)
 
-    if (!(result) || !(result.data)) {
-      this.logger.info('Could not find data for ', link)
-      return null
-    }
+      if (!(result) || !(result.data)) {
+        this.logger.info('Could not find data for ', link)
+        return null
+      }
 
-    let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
+      let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
 
-    this.logger.debug('Retrieved fingerprint', publicKeyFingerprint)
-    let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
-    identity.verify(result.data, reference)
+      this.logger.debug('Retrieved fingerprint', publicKeyFingerprint)
+      let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
+      identity.verify(result.data, reference)
 
-    return {
-      'data': result.data,
-      'previous': this.linkFromReference(result.previous)
+      let retrievedObj = {
+        'data': result.data,
+        'previous': this.linkFromReference(result.previous)
+      }
+      this.myCache.set(link, retrievedObj)
+      return retrievedObj
     }
   }
 
@@ -177,7 +187,7 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} importerDid - Did that will automatically get access to imported claim
    * @returns {Promise<string>} - Link to the claim if successfully imported, null otherwise.
    */
-  async import (did, link, data, importerDid = null) {
+  async import(did, link, data, importerDid = null) {
     let claim = {
       'message': data,
       'signature': BaseConnector.referenceFromLink(link),
@@ -210,7 +220,7 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<{observable: Observable<ExtendedClaimInfo>, readyPromise: Promise<>}>} -
    * The observable can be subscribed to. The readyPromise signals that the observation has truly started.
    */
-  async observe (did, claimFilter = {}, accessorDid = null, accessorPrivkey = null) {
+  async observe(did, claimFilter = {}, accessorDid = null, accessorPrivkey = null) {
     let pubkey = BaseConnector.referenceFromDid(did)
     let accessorPubkey = BaseConnector.referenceFromDid(accessorDid)
 

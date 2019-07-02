@@ -27,6 +27,7 @@
     "express": "4.17.1",
     "json-stable-stringify": "1.0.1",
     "loglevel": "1.6.2",
+    "node-cache": "^4.2.0",
     "node-forge": "0.8.4",
     "rxjs": "6.5.2",
     "ws": "6.2.1"
