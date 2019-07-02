@@ -218,13 +218,13 @@ describe('discipl-ephemeral-connector', () => {
       // Valid data would be eyJuZWVkIjoid2luZSJ9
       axiosStub.onSecondCall().returns({
         data:
-          {
-            data: 'eyJuZWVkIjoidGVhIn0=',
-            signature:
-              'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
-            previous:
-              'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
-          }
+        {
+          data: 'eyJuZWVkIjoidGVhIn0=',
+          signature:
+            'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
+          previous:
+            'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
+        }
       })
 
       let claim = await ephemeralConnector.get('eyJub25jZSI6InN2TGlWVmRJVmJodmJPTW04VURESEhiUXNUR1BHazMzMDBXQ3N1UW5ncTA9Iiwic2lnbmF0dXJlIjoiMzFrVVVVUnk3OXpqUy9kekNBeDN5RmxhNHhkNUp5cGFsbExTa2Z6cmVYazJaY21NdU10TFBwb2MvcC95UE1YdUptdm5DbnR1WVp5NjNpNDFrL0lKQkE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0=')
@@ -248,24 +248,20 @@ describe('discipl-ephemeral-connector', () => {
     it('should remove stale identities', async () => {
       let ephemeralConnector = new EphemeralConnector()
       ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
-
       let identity = await ephemeralConnector.newIdentity()
-
       let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'THIS': 'WILL_DISAPPEAR' })
-
       let claim = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
-
       expect(claim).to.deep.equal({
         'data': {
           'THIS': 'WILL_DISAPPEAR'
         },
         'previous': null
       })
-
       await timeoutPromise(1500)
 
-      let expiredClaim = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
+      ephemeralConnector.deleteAllFromCache()
 
+      let expiredClaim = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
       expect(expiredClaim).to.equal(null)
     }).timeout(5000)
 
@@ -276,7 +272,7 @@ describe('discipl-ephemeral-connector', () => {
       let identity = await ephemeralConnector.newIdentity()
 
       let observeResult = await ephemeralConnector.observe(null, { 'some': 'filter' }, identity.did, identity.privkey)
-      observeResult.observable.subscribe(() => {}, () => {})
+      observeResult.observable.subscribe(() => { }, () => { })
       await observeResult.readyPromise
 
       expect(ephemeralServer.storage.globalObservers).to.have.length(1)
@@ -704,9 +700,10 @@ describe('discipl-ephemeral-connector', () => {
           await observeResult.readyPromise
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
-          let allowClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {
-            'did': accessorIdentity.did
-          }
+          let allowClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, {
+            [BaseConnector.ALLOW]: {
+              'did': accessorIdentity.did
+            }
           })
 
           let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })

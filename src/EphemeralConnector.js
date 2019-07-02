@@ -177,6 +177,13 @@ class EphemeralConnector extends BaseConnector {
   }
 
   /**
+  * Deletes all key-value pairs from the myCache variable in the ephemeral connector.
+  */
+  async deleteAllFromCache() {
+    this.myCache.flushAll();
+  }
+
+  /**
    * Imports a claim that was exported from another ephemeral connector.
    *
    * This needs the signature on it, in the form of the link. The signature is verfied when using this method.
