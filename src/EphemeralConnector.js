@@ -21,6 +21,7 @@ class EphemeralConnector extends BaseConnector {
     this.identityFactory = new IdentityFactory()
     this.identityFactory.setConnector(this)
     this.myCache = new NodeCache()
+    this.caching = true
   }
 
   /**
@@ -43,8 +44,11 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info','debug' or 'trace' to
    * get more information
    */
-  configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
+  configure (serverEndpoint, websocketEndpoint, w3cwebsocket, caching) {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
+    if (caching !== undefined) {
+      this.caching = caching
+    }
   }
 
   /**
@@ -141,10 +145,16 @@ class EphemeralConnector extends BaseConnector {
    * claim before it.
    */
   async get (link, did = null, privkey = null) {
-    try {
-      let retrievedObjFromCache = this.myCache.get(link, true)
-      return retrievedObjFromCache
-    } catch (err) {
+    let retrievedObj
+    let cacheKey
+    if (this.caching) {
+      cacheKey = link
+      if (did) {
+        cacheKey += did
+      }
+      retrievedObj = this.myCache.get(cacheKey)
+    }
+    if (!retrievedObj) {
       let reference = BaseConnector.referenceFromLink(link)
       let pubkey = BaseConnector.referenceFromDid(did)
 
@@ -167,13 +177,15 @@ class EphemeralConnector extends BaseConnector {
       let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
       identity.verify(result.data, reference)
 
-      let retrievedObj = {
+      retrievedObj = {
         'data': result.data,
         'previous': this.linkFromReference(result.previous)
       }
-      this.myCache.set(link, retrievedObj)
-      return retrievedObj
+      if (this.caching) {
+        this.myCache.set(cacheKey, retrievedObj)
+      }
     }
+    return retrievedObj
   }
 
   /**
