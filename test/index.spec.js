@@ -218,13 +218,13 @@ describe('discipl-ephemeral-connector', () => {
       // Valid data would be eyJuZWVkIjoid2luZSJ9
       axiosStub.onSecondCall().returns({
         data:
-          {
-            data: 'eyJuZWVkIjoidGVhIn0=',
-            signature:
-              'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
-            previous:
-              'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
-          }
+        {
+          data: 'eyJuZWVkIjoidGVhIn0=',
+          signature:
+            'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
+          previous:
+            'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
+        }
       })
 
       let claim = await ephemeralConnector.get('eyJub25jZSI6InN2TGlWVmRJVmJodmJPTW04VURESEhiUXNUR1BHazMzMDBXQ3N1UW5ncTA9Iiwic2lnbmF0dXJlIjoiMzFrVVVVUnk3OXpqUy9kekNBeDN5RmxhNHhkNUp5cGFsbExTa2Z6cmVYazJaY21NdU10TFBwb2MvcC95UE1YdUptdm5DbnR1WVp5NjNpNDFrL0lKQkE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0=')
@@ -237,6 +237,8 @@ describe('discipl-ephemeral-connector', () => {
   })
   describe('just in server mode', () => {
     before(() => {
+      // The 1 in the parameter is for testing with caching, it replaces the 24 hours retentiontime that a claim has normally
+      // The awaiting timeoutpromises in the test is used therefore to exceed the retentiontime
       ephemeralServer = new EphemeralServer(3232, CERT_PATH, KEY_PATH, 1)
       ephemeralServer.start()
     })
@@ -248,25 +250,30 @@ describe('discipl-ephemeral-connector', () => {
     it('should remove stale identities', async () => {
       let ephemeralConnector = new EphemeralConnector()
       ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
-
       let identity = await ephemeralConnector.newIdentity()
-
       let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'THIS': 'WILL_DISAPPEAR' })
-
       let claim = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
-
       expect(claim).to.deep.equal({
         'data': {
           'THIS': 'WILL_DISAPPEAR'
         },
         'previous': null
       })
-
       await timeoutPromise(1500)
+      let claimAfterTimeout = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
 
-      let expiredClaim = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
+      // Even if the timeout is passed, the get method will get the claim from the stored Cache
+      expect(claimAfterTimeout).to.deep.equal({
+        'data': {
+          'THIS': 'WILL_DISAPPEAR'
+        },
+        'previous': null
+      })
+      ephemeralConnector.deleteAllFromCache()
 
-      expect(expiredClaim).to.equal(null)
+      // after awaiting the timeout and also clearing the cache, it's now impossible to get the claim
+      let claimAfterClearingCache = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
+      expect(claimAfterClearingCache).to.equal(null)
     }).timeout(5000)
 
     it('should remove observers of stale identities', async () => {
@@ -276,7 +283,7 @@ describe('discipl-ephemeral-connector', () => {
       let identity = await ephemeralConnector.newIdentity()
 
       let observeResult = await ephemeralConnector.observe(null, { 'some': 'filter' }, identity.did, identity.privkey)
-      observeResult.observable.subscribe(() => {}, () => {})
+      observeResult.observable.subscribe(() => { }, () => { })
       await observeResult.readyPromise
 
       expect(ephemeralServer.storage.globalObservers).to.have.length(1)
@@ -284,6 +291,47 @@ describe('discipl-ephemeral-connector', () => {
       await timeoutPromise(1500)
 
       expect(ephemeralServer.storage.globalObservers).to.have.length(0)
+    }).timeout(5000)
+
+    it('testing how it works with and without caching', async () => {
+      let ephemeralConnector = new EphemeralConnector()
+      ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
+      let identity = await ephemeralConnector.newIdentity()
+      let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
+      let claim1 = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
+
+      let ephemeralConnectorWithoutCaching = new EphemeralConnector()
+      ephemeralConnectorWithoutCaching.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket, false)
+      let identity2 = await ephemeralConnectorWithoutCaching.newIdentity()
+      let claimlink2 = await ephemeralConnectorWithoutCaching.claim(identity2.did, identity2.privkey, { 'need': 'tea' })
+      let claim2 = await ephemeralConnectorWithoutCaching.get(claimlink2, identity2.did, identity2.privkey)
+
+      expect(claim1).to.deep.equal({
+        'data': {
+          'need': 'beer'
+        },
+        'previous': null
+      })
+      expect(claim2).to.deep.equal({
+        'data': {
+          'need': 'tea'
+        },
+        'previous': null
+      })
+      await timeoutPromise(3000)
+
+      let claimWithCaching = await ephemeralConnector.get(claimLink, identity.did, identity.privkey)
+      let claimWithoutCaching = await ephemeralConnectorWithoutCaching.get(claimlink2, identity2.did, identity2.privkey)
+      // After awaiting the timout, the get method can only get the claims from the cache.
+      // With these two expect's we can see that the claim with caching will get the data back
+      // And the claim without caching, can't get anything back
+      expect(claimWithCaching).to.deep.equal({
+        'data': {
+          'need': 'beer'
+        },
+        'previous': null
+      })
+      expect(claimWithoutCaching).to.equal(null)
     }).timeout(5000)
   })
   describe('with a backend', () => {
@@ -704,9 +752,10 @@ describe('discipl-ephemeral-connector', () => {
           await observeResult.readyPromise
 
           let claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'beer' })
-          let allowClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {
-            'did': accessorIdentity.did
-          }
+          let allowClaimLink = await ephemeralConnector.claim(identity.did, identity.privkey, {
+            [BaseConnector.ALLOW]: {
+              'did': accessorIdentity.did
+            }
           })
 
           let claimLink2 = await ephemeralConnector.claim(identity.did, identity.privkey, { 'need': 'wine' })

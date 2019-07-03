@@ -8,7 +8,7 @@ script:
   - npm run lint
   - npm audit
   # for test purposes, we ignore the fact that the certificate is self-signed
-  - NODE_TLS_REJECT_UNAUTHORIZED=0 npm test
+  - npm test
 
 after_success:
   - npm run coverage

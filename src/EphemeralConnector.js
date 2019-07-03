@@ -6,6 +6,8 @@ import EphemeralStorage from './EphemeralStorage'
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
 
+import NodeCache from 'node-cache'
+
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
  * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
@@ -18,6 +20,8 @@ class EphemeralConnector extends BaseConnector {
     this.logger.setLevel(loglevel)
     this.identityFactory = new IdentityFactory()
     this.identityFactory.setConnector(this)
+    this.myCache = new NodeCache()
+    this.caching = true
   }
 
   /**
@@ -40,8 +44,11 @@ class EphemeralConnector extends BaseConnector {
    * @param {string} loglevel - Loglevel of the connector. Default at 'warn'. Change to 'info','debug' or 'trace' to
    * get more information
    */
-  configure (serverEndpoint, websocketEndpoint, w3cwebsocket) {
+  configure (serverEndpoint, websocketEndpoint, w3cwebsocket, caching) {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
+    if (caching !== undefined) {
+      this.caching = caching
+    }
   }
 
   /**
@@ -138,32 +145,54 @@ class EphemeralConnector extends BaseConnector {
    * claim before it.
    */
   async get (link, did = null, privkey = null) {
-    let reference = BaseConnector.referenceFromLink(link)
-    let pubkey = BaseConnector.referenceFromDid(did)
-
-    let signature
-    if (pubkey != null && privkey != null) {
-      let identity = await this.identityFactory.fromDid(did, privkey)
-      signature = identity.sign(reference)
+    let retrievedObj
+    let cacheKey
+    if (this.caching) {
+      cacheKey = link
+      if (did) {
+        cacheKey += did
+      }
+      retrievedObj = this.myCache.get(cacheKey)
     }
+    if (!retrievedObj) {
+      let reference = BaseConnector.referenceFromLink(link)
+      let pubkey = BaseConnector.referenceFromDid(did)
 
-    let result = await this.ephemeralClient.get(reference, pubkey, signature)
+      let signature
+      if (pubkey != null && privkey != null) {
+        let identity = await this.identityFactory.fromDid(did, privkey)
+        signature = identity.sign(reference)
+      }
 
-    if (!(result) || !(result.data)) {
-      this.logger.info('Could not find data for ', link)
-      return null
+      let result = await this.ephemeralClient.get(reference, pubkey, signature)
+
+      if (!(result) || !(result.data)) {
+        this.logger.info('Could not find data for ', link)
+        return null
+      }
+
+      let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
+
+      this.logger.debug('Retrieved fingerprint', publicKeyFingerprint)
+      let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
+      identity.verify(result.data, reference)
+
+      retrievedObj = {
+        'data': result.data,
+        'previous': this.linkFromReference(result.previous)
+      }
+      if (this.caching) {
+        this.myCache.set(cacheKey, retrievedObj)
+      }
     }
+    return retrievedObj
+  }
 
-    let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
-
-    this.logger.debug('Retrieved fingerprint', publicKeyFingerprint)
-    let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
-    identity.verify(result.data, reference)
-
-    return {
-      'data': result.data,
-      'previous': this.linkFromReference(result.previous)
-    }
+  /**
+  * Deletes all key-value pairs from the myCache variable in the ephemeral connector.
+  */
+  async deleteAllFromCache () {
+    this.myCache.flushAll()
   }
 
   /**

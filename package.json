@@ -1,6 +1,6 @@
 {
   "name": "@discipl/core-ephemeral",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Discipl Core Ephemeral Connector",
   "main": "dist/index.js",
   "module": "src/index.js",
@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "prepack": "babel src/ --out-dir dist",
-    "test": "nyc --reporter=html --reporter=text ./node_modules/.bin/mocha --require @babel/register ./test/**/*.spec.js",
+    "test": "NODE_TLS_REJECT_UNAUTHORIZED=0 nyc --reporter=html --reporter=text ./node_modules/.bin/mocha --require @babel/register ./test/**/*.spec.js",
     "lint": "./node_modules/standard/bin/cmd.js --parser babel-eslint",
     "lint-fix": "./node_modules/standard/bin/cmd.js --parser babel-eslint --fix",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && ./node_modules/codecov/bin/codecov"
@@ -27,6 +27,7 @@
     "express": "4.17.1",
     "json-stable-stringify": "1.0.1",
     "loglevel": "1.6.2",
+    "node-cache": "^4.2.0",
     "node-forge": "0.8.4",
     "rxjs": "6.5.2",
     "ws": "6.2.1"
