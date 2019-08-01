@@ -51,6 +51,12 @@ class EphemeralClient {
 
     let socket = null
 
+    const timeoutPromise = (timeoutMillis) => {
+      return new Promise(function (resolve, reject) {
+        setTimeout(() => resolve(), timeoutMillis)
+      })
+    }
+
     /* The construct below is slightly convoluted. This is why:
        This function wants to return an observable. Since there is client-server communication involved, there is the
        potential for race conditions. In particular, since the websocket is only opened once the observable is
@@ -60,16 +66,11 @@ class EphemeralClient {
        It gets confirmation from the server that the listener is in place, and is only resolved then.
     */
     let readyPromise = new Promise((resolve, reject) => {
-      const timeoutPromise = (timeoutMillis) => {
-        return new Promise(function (resolve, reject) {
-          setTimeout(() => resolve(), timeoutMillis)
-        })
-      }
       socket = new WebSocketSubject({
         'url': this.websocketEndpoint,
         'WebSocketCtor': this.w3cwebsocket,
         openObserver: {
-          'next': async (e) => {
+          'next': async (event) => {
             // When the websocket is opened, the nonce is sent. The POST below sends the information to the server
             // that goes with this nonce, allowing it to start the actual observe.
             const MAX_TRIES = 10
@@ -85,7 +86,7 @@ class EphemeralClient {
                   resolve()
                 })
                 return
-              } catch (e) {
+              } catch (err) {
                 // Purpose-ful no-op
               }
             }

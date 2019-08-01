@@ -49,9 +49,9 @@ class EphemeralServer {
     }
 
     let wss = new ws.Server({ 'server': this.server })
-    wss.on('connection', (ws) => {
-      ws.on('message', (nonce) => {
-        this.websockets[JSON.parse(nonce)] = ws
+    wss.on('connection', (wsCon) => {
+      wsCon.on('message', (nonce) => {
+        this.websockets[JSON.parse(nonce)] = wsCon
       })
     })
 
@@ -138,10 +138,10 @@ class EphemeralServer {
       }
     }
 
-    let ws = this.websockets[req.body.nonce]
+    const wsCon = this.websockets[req.body.nonce]
 
     let observer = {
-      'next': (value) => ws.send(stringify(value), {}, errorCallback)
+      'next': (value) => wsCon.send(stringify(value), {}, errorCallback)
     }
 
     subject.subscribe(observer)

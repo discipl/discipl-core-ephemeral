@@ -88,11 +88,8 @@ class EphemeralConnector extends BaseConnector {
    */
   async newIdentity (options = {}) {
     this.logger.info('Creating new identity')
-    if (options.cert) {
-      let identity = await this.identityFactory.fromCert(options.cert, options.privkey)
-      return identity.ssid
-    }
-    let identity = await this.identityFactory.newIdentity()
+    const identity = options.cert ? await this.identityFactory.fromCert(options.cert, options.privkey) : await this.identityFactory.newIdentity()
+
     return identity.ssid
   }
 
@@ -160,8 +157,8 @@ class EphemeralConnector extends BaseConnector {
 
       let signature
       if (pubkey != null && privkey != null) {
-        let identity = await this.identityFactory.fromDid(did, privkey)
-        signature = identity.sign(reference)
+        const signIdentity = await this.identityFactory.fromDid(did, privkey)
+        signature = signIdentity.sign(reference)
       }
 
       let result = await this.ephemeralClient.get(reference, pubkey, signature)

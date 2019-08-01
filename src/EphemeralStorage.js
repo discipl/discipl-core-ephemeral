@@ -64,14 +64,14 @@ class EphemeralStorage {
 
     for (let listener of this.storage[publicKey].observers.concat(this.globalObservers)) {
       let sourceClaim = this.storage[publicKey]['claims'][claimId]
-      let claim = {
+      let claimForObserver = {
         'data': sourceClaim.data,
         'signature': sourceClaim.signature,
         'previous': sourceClaim.previous
       }
 
       if (this._hasAccessTo(claimId, listener.owner)) {
-        listener.subject.next({ 'claim': claim, 'pubkey': publicKey })
+        listener.subject.next({ 'claim': claimForObserver, 'pubkey': publicKey })
       }
     }
 

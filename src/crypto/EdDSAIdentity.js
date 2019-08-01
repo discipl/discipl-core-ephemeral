@@ -5,12 +5,10 @@ const EC_PREFIX = 'ec:'
 class EdDSAIdentity {
   constructor (reference = null, privkey = null) {
     if (reference == null) {
-      let keypair = forge.pki.ed25519.generateKeyPair()
-
-      let reference = EC_PREFIX + keypair.publicKey.toString('base64')
+      const keypair = forge.pki.ed25519.generateKeyPair()
 
       this.keypair = keypair
-      this.reference = reference
+      this.reference = EC_PREFIX + keypair.publicKey.toString('base64')
       this.ssid = {
         'privkey': keypair.privateKey,
         'metadata': {
