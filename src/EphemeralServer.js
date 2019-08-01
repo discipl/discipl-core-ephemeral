@@ -41,14 +41,14 @@ class EphemeralServer {
 
     if (this.certificatePath != null) {
       this.server = https.createServer({
-        'key': fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
-        'cert': fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
+        key: fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
+        cert: fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
       }, app).listen(this.port, null, 511, () => this.logger.info(`Secure ephemeral server listening on ${this.port}!`))
     } else {
       this.server = http.createServer(app).listen(this.port, null, 511, () => this.logger.info(`Insecure ephemeral server listening on ${this.port}!`))
     }
 
-    let wss = new ws.Server({ 'server': this.server })
+    const wss = new ws.Server({ server: this.server })
     wss.on('connection', (wsCon) => {
       wsCon.on('message', (nonce) => {
         this.websockets[JSON.parse(nonce)] = wsCon
@@ -59,8 +59,8 @@ class EphemeralServer {
   }
 
   clean () {
-    let now = new Date().getTime()
-    for (let entry of Object.entries(this.timestamps)) {
+    const now = new Date().getTime()
+    for (const entry of Object.entries(this.timestamps)) {
       if (now - entry[1].getTime() > this.retentionTime * 1000) {
         this.storage.deleteIdentity(entry[0])
       }
@@ -77,7 +77,7 @@ class EphemeralServer {
       delete req.body.access
     }
     try {
-      let result = await this.storage.claim(req.body)
+      const result = await this.storage.claim(req.body)
       this.ping(req.body.publicKey)
       res.send(stringify(result))
     } catch (e) {
@@ -87,7 +87,7 @@ class EphemeralServer {
 
   async get (req, res) {
     try {
-      let result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
+      const result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
       this.ping(req.body.accessorPubkey)
       this.ping(await this.storage.getPublicKey(req.body.claimId))
       res.send(result)
@@ -102,7 +102,7 @@ class EphemeralServer {
   }
 
   async getPublicKey (req, res) {
-    let result = await this.storage.getPublicKey(req.body.claimId)
+    const result = await this.storage.getPublicKey(req.body.claimId)
     this.ping(result)
     res.send(result)
   }
@@ -114,7 +114,7 @@ class EphemeralServer {
   }
 
   async getCert (req, res) {
-    let result = await this.storage.getCertForFingerprint(req.body.fingerprint)
+    const result = await this.storage.getCertForFingerprint(req.body.fingerprint)
     this.ping(req.body.fingerprint)
     res.send(forge.pki.certificateToPem(result))
   }
@@ -125,14 +125,14 @@ class EphemeralServer {
       return
     }
 
-    let observeResult = await this.storage.observe(req.body.scope, req.body.accessorPubkey, req.body.accessorSignature)
+    const observeResult = await this.storage.observe(req.body.scope, req.body.accessorPubkey, req.body.accessorSignature)
 
     this.ping(req.body.accessorPubkey)
     this.ping(req.body.scope)
 
-    let subject = observeResult[0]
+    const subject = observeResult[0]
 
-    let errorCallback = (error) => {
+    const errorCallback = (error) => {
       if (error != null && !error.message.includes('WebSocket is not open')) {
         this.logger.error('Error while sending ws message:', error)
       }
@@ -140,8 +140,8 @@ class EphemeralServer {
 
     const wsCon = this.websockets[req.body.nonce]
 
-    let observer = {
-      'next': (value) => wsCon.send(stringify(value), {}, errorCallback)
+    const observer = {
+      next: (value) => wsCon.send(stringify(value), {}, errorCallback)
     }
 
     subject.subscribe(observer)

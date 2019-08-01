@@ -60,7 +60,7 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<string>} Did that made this claim
    */
   async getDidOfClaim (link) {
-    let reference = BaseConnector.referenceFromLink(link)
+    const reference = BaseConnector.referenceFromLink(link)
     return this.didFromReference(await this.ephemeralClient.getPublicKey(reference))
   }
 
@@ -112,15 +112,15 @@ class EphemeralConnector extends BaseConnector {
     log.info('Making a claim')
     // Sort the keys to get the same message for the same data
 
-    let reference = BaseConnector.referenceFromDid(did)
+    const reference = BaseConnector.referenceFromDid(did)
 
-    let identity = await this.identityFactory.fromDid(did, privkey)
-    let signature = identity.sign(data)
+    const identity = await this.identityFactory.fromDid(did, privkey)
+    const signature = identity.sign(data)
 
-    let claim = {
-      'message': data,
-      'signature': signature,
-      'publicKey': reference
+    const claim = {
+      message: data,
+      signature: signature,
+      publicKey: reference
     }
 
     return this.linkFromReference(await this.ephemeralClient.claim(claim))
@@ -152,8 +152,8 @@ class EphemeralConnector extends BaseConnector {
       retrievedObj = this.myCache.get(cacheKey)
     }
     if (!retrievedObj) {
-      let reference = BaseConnector.referenceFromLink(link)
-      let pubkey = BaseConnector.referenceFromDid(did)
+      const reference = BaseConnector.referenceFromLink(link)
+      const pubkey = BaseConnector.referenceFromDid(did)
 
       let signature
       if (pubkey != null && privkey != null) {
@@ -161,22 +161,22 @@ class EphemeralConnector extends BaseConnector {
         signature = signIdentity.sign(reference)
       }
 
-      let result = await this.ephemeralClient.get(reference, pubkey, signature)
+      const result = await this.ephemeralClient.get(reference, pubkey, signature)
 
       if (!(result) || !(result.data)) {
         this.logger.info('Could not find data for ', link)
         return null
       }
 
-      let publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
+      const publicKeyFingerprint = await this.ephemeralClient.getPublicKey(reference)
 
       this.logger.debug('Retrieved fingerprint', publicKeyFingerprint)
-      let identity = await this.identityFactory.fromReference(publicKeyFingerprint)
+      const identity = await this.identityFactory.fromReference(publicKeyFingerprint)
       identity.verify(result.data, reference)
 
       retrievedObj = {
-        'data': result.data,
-        'previous': this.linkFromReference(result.previous)
+        data: result.data,
+        previous: this.linkFromReference(result.previous)
       }
       if (this.caching) {
         this.myCache.set(cacheKey, retrievedObj)
@@ -204,16 +204,16 @@ class EphemeralConnector extends BaseConnector {
    * @returns {Promise<string>} - Link to the claim if successfully imported, null otherwise.
    */
   async import (did, link, data, importerDid = null) {
-    let claim = {
-      'message': data,
-      'signature': BaseConnector.referenceFromLink(link),
-      'publicKey': BaseConnector.referenceFromDid(did)
+    const claim = {
+      message: data,
+      signature: BaseConnector.referenceFromLink(link),
+      publicKey: BaseConnector.referenceFromDid(did)
     }
 
     if (importerDid != null) {
       claim['access'] = {
-        'scope': link,
-        'did': importerDid
+        scope: link,
+        did: importerDid
       }
     }
     return this.linkFromReference(await this.ephemeralClient.claim(claim))
@@ -237,21 +237,21 @@ class EphemeralConnector extends BaseConnector {
    * The observable can be subscribed to. The readyPromise signals that the observation has truly started.
    */
   async observe (did, claimFilter = {}, accessorDid = null, accessorPrivkey = null) {
-    let pubkey = BaseConnector.referenceFromDid(did)
-    let accessorPubkey = BaseConnector.referenceFromDid(accessorDid)
+    const pubkey = BaseConnector.referenceFromDid(did)
+    const accessorPubkey = BaseConnector.referenceFromDid(accessorDid)
 
     let signature = null
     if (accessorPubkey != null && accessorPrivkey != null) {
-      let message = pubkey == null ? 'null' : pubkey
-      let identity = await this.identityFactory.fromDid(accessorDid, accessorPrivkey)
+      const message = pubkey == null ? 'null' : pubkey
+      const identity = await this.identityFactory.fromDid(accessorDid, accessorPrivkey)
       signature = identity.sign(message)
     }
 
-    let [subject, readyPromise] = await this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
+    const [subject, readyPromise] = await this.ephemeralClient.observe(pubkey, accessorPubkey, signature)
 
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
-    let processedSubject = subject.pipe(flatMap(async (claim) => {
-      let identity = await this.identityFactory.fromReference(claim.pubkey)
+    const processedSubject = subject.pipe(flatMap(async (claim) => {
+      const identity = await this.identityFactory.fromReference(claim.pubkey)
       identity.verify(claim['claim'].data, claim['claim'].signature)
 
       if (claim['claim'].previous) {
@@ -266,7 +266,7 @@ class EphemeralConnector extends BaseConnector {
       return claim
     })).pipe(filter(claim => {
       if (claimFilter != null) {
-        for (let predicate of Object.keys(claimFilter)) {
+        for (const predicate of Object.keys(claimFilter)) {
           if (claim['claim']['data'][predicate] == null) {
             // Predicate not present in claim
             return false
@@ -283,7 +283,7 @@ class EphemeralConnector extends BaseConnector {
     })
     )
 
-    return { 'observable': processedSubject, 'readyPromise': readyPromise }
+    return { observable: processedSubject, readyPromise: readyPromise }
   }
 }
 

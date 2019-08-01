@@ -19,20 +19,20 @@ class EphemeralStorage {
   }
 
   async claim (claim) {
-    let verification = await this._verifySignature(claim)
+    const verification = await this._verifySignature(claim)
 
     if (verification !== true) {
       this.logger.warn('Invalid signature on claim by pubkey', claim.publicKey)
       return null
     }
 
-    let signature = claim.signature
-    let message = claim.message
+    const signature = claim.signature
+    const message = claim.message
 
-    let publicKey = claim.publicKey
+    const publicKey = claim.publicKey
     this._lazyInitStorage(publicKey)
 
-    let claimId = signature
+    const claimId = signature
 
     if (Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
       this.logger.info('Claim with id ', claimId, ' already existed')
@@ -40,11 +40,11 @@ class EphemeralStorage {
     }
 
     this.claimOwners[claimId] = publicKey
-    this.storage[publicKey]['claims'][claimId] = { 'data': message, 'signature': signature, 'previous': this.storage[publicKey]['last'], 'access': [] }
+    this.storage[publicKey]['claims'][claimId] = { data: message, signature: signature, previous: this.storage[publicKey]['last'], access: [] }
     this.storage[publicKey]['last'] = claimId
 
     if (Object.keys(message).includes(BaseConnector.ALLOW) || claim.access) {
-      let access = message[BaseConnector.ALLOW] || claim.access
+      const access = message[BaseConnector.ALLOW] || claim.access
       let object = this.storage[publicKey]
 
       if (BaseConnector.isLink(access.scope) && this.claimOwners[BaseConnector.referenceFromLink(access.scope)] === publicKey) {
@@ -62,16 +62,16 @@ class EphemeralStorage {
       }
     }
 
-    for (let listener of this.storage[publicKey].observers.concat(this.globalObservers)) {
-      let sourceClaim = this.storage[publicKey]['claims'][claimId]
-      let claimForObserver = {
-        'data': sourceClaim.data,
-        'signature': sourceClaim.signature,
-        'previous': sourceClaim.previous
+    for (const listener of this.storage[publicKey].observers.concat(this.globalObservers)) {
+      const sourceClaim = this.storage[publicKey]['claims'][claimId]
+      const claimForObserver = {
+        data: sourceClaim.data,
+        signature: sourceClaim.signature,
+        previous: sourceClaim.previous
       }
 
       if (this._hasAccessTo(claimId, listener.owner)) {
-        listener.subject.next({ 'claim': claimForObserver, 'pubkey': publicKey })
+        listener.subject.next({ claim: claimForObserver, pubkey: publicKey })
       }
     }
 
@@ -79,7 +79,7 @@ class EphemeralStorage {
   }
 
   _hasAccessTo (claimId, pubkey) {
-    let claimPublicKey = this.claimOwners[claimId]
+    const claimPublicKey = this.claimOwners[claimId]
 
     if (claimPublicKey === pubkey) {
       return true
@@ -89,7 +89,7 @@ class EphemeralStorage {
       return false
     }
 
-    for (let accessObject of [this.storage[claimPublicKey]['access'], this.storage[claimPublicKey]['claims'][claimId]['access']]) {
+    for (const accessObject of [this.storage[claimPublicKey]['access'], this.storage[claimPublicKey]['claims'][claimId]['access']]) {
       if (accessObject === true) {
         return true
       } else {
@@ -104,18 +104,18 @@ class EphemeralStorage {
 
   async get (claimId, accessorPubkey, accessorSignature) {
     if (accessorPubkey != null && accessorSignature != null) {
-      let identity = await this.identityFactory.fromReference(accessorPubkey)
+      const identity = await this.identityFactory.fromReference(accessorPubkey)
       identity.verify(claimId, accessorSignature)
     }
 
-    let publicKey = this.claimOwners[claimId]
+    const publicKey = this.claimOwners[claimId]
 
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
-      let sourceClaim = this.storage[publicKey]['claims'][claimId]
-      let claim = {
-        'data': sourceClaim.data,
-        'signature': sourceClaim.signature,
-        'previous': sourceClaim.previous
+      const sourceClaim = this.storage[publicKey]['claims'][claimId]
+      const claim = {
+        data: sourceClaim.data,
+        signature: sourceClaim.signature,
+        previous: sourceClaim.previous
       }
 
       if (this._hasAccessTo(claimId, accessorPubkey)) {
@@ -146,16 +146,16 @@ class EphemeralStorage {
 
   async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
     if (accessorPubkey != null && accessorSignature != null) {
-      let message = publicKey == null ? 'null' : publicKey
+      const message = publicKey == null ? 'null' : publicKey
 
-      let identity = await this.identityFactory.fromReference(accessorPubkey)
+      const identity = await this.identityFactory.fromReference(accessorPubkey)
       identity.verify(message, accessorSignature)
     }
 
-    let subject = new Subject()
-    let listener = {
-      'subject': subject,
-      'owner': accessorPubkey
+    const subject = new Subject()
+    const listener = {
+      subject: subject,
+      owner: accessorPubkey
     }
     if (publicKey !== null) {
       this._lazyInitStorage(publicKey)
@@ -169,7 +169,7 @@ class EphemeralStorage {
   }
 
   async _verifySignature (claim) {
-    let identity = await this.identityFactory.fromReference(claim.publicKey)
+    const identity = await this.identityFactory.fromReference(claim.publicKey)
     return identity.verify(claim.message, claim.signature)
   }
 
@@ -177,7 +177,7 @@ class EphemeralStorage {
     this.logger.info('Deleting information related to fingerprint', fingerprint)
     delete this.storage[fingerprint]
 
-    for (let claimIdOwner of Object.entries(this.claimOwners)) {
+    for (const claimIdOwner of Object.entries(this.claimOwners)) {
       this.logger.debug('Checking if ', claimIdOwner, 'is owned by', fingerprint)
       if (claimIdOwner[1] === fingerprint) {
         this.logger.debug('Deleting claimOwner entry for claimId', claimIdOwner[0])
@@ -200,7 +200,7 @@ class EphemeralStorage {
 
   _lazyInitStorage (publicKey) {
     if (!Object.keys(this.storage).includes(publicKey)) {
-      this.storage[publicKey] = { 'claims': {}, 'last': null, 'observers': [], 'access': [] }
+      this.storage[publicKey] = { claims: {}, last: null, observers: [], access: [] }
     }
   }
 }
