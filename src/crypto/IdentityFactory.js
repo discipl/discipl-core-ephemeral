@@ -27,7 +27,7 @@ class IdentityFactory {
   }
 
   async fromDid (did, privkey = null) {
-    let reference = BaseConnector.referenceFromDid(did)
+    const reference = BaseConnector.referenceFromDid(did)
 
     return this.fromReference(reference, privkey)
   }
@@ -37,7 +37,7 @@ class IdentityFactory {
       return new EdDSAIdentity(reference, privkey)
     } else {
       // Reference starts with CRT_PREFIX
-      let cert = await this.ephemeralClient.getCertForFingerprint(reference)
+      const cert = await this.ephemeralClient.getCertForFingerprint(reference)
       this.logger.debug('Retrieved cert', cert)
       return new RSAIdentity(cert, privkey)
     }

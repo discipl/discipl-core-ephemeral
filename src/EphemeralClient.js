@@ -13,43 +13,49 @@ class EphemeralClient {
   }
 
   async claim (claim) {
-    let response = await axios.post(this.serverEndpoint + '/claim', claim)
+    const response = await axios.post(this.serverEndpoint + '/claim', claim)
     return response.data
   }
 
   async get (claimId, accessorPubkey, accessorSignature) {
-    let response = await axios.post(this.serverEndpoint + '/get', { 'claimId': claimId, 'accessorPubkey': accessorPubkey, 'accessorSignature': accessorSignature })
+    const response = await axios.post(this.serverEndpoint + '/get', { claimId: claimId, accessorPubkey: accessorPubkey, accessorSignature: accessorSignature })
     return response.data
   }
 
   async getLatest (publicKey) {
-    let response = await axios.post(this.serverEndpoint + '/getLatest', { 'publicKey': publicKey })
+    const response = await axios.post(this.serverEndpoint + '/getLatest', { publicKey: publicKey })
 
     return response.data
   }
 
   async getPublicKey (claimId) {
-    let response = await axios.post(this.serverEndpoint + '/getPublicKey', { 'claimId': claimId })
+    const response = await axios.post(this.serverEndpoint + '/getPublicKey', { claimId: claimId })
 
     return response.data
   }
 
   async getCertForFingerprint (fingerprint) {
-    let response = await axios.post(this.serverEndpoint + '/getCert', { 'fingerprint': fingerprint })
+    const response = await axios.post(this.serverEndpoint + '/getCert', { fingerprint: fingerprint })
 
     return forge.pki.certificateFromPem(response.data)
   }
 
   async storeCert (fingerprint, cert) {
-    let response = await axios.post(this.serverEndpoint + '/storeCert', { 'fingerprint': fingerprint, 'cert': forge.pki.certificateToPem(cert) })
+    const response = await axios.post(this.serverEndpoint + '/storeCert', { fingerprint: fingerprint, cert: forge.pki.certificateToPem(cert) })
 
     return response.data
   }
 
   async observe (publicKey = null, accessorPubkey = null, accessorSignature = null) {
-    let nonce = forge.util.encode64(forge.random.getBytesSync(32))
+    const nonce = forge.util.encode64(forge.random.getBytesSync(32))
 
     let socket = null
+
+    const timeoutPromise = (timeoutMillis) => {
+      return new Promise(function (resolve, reject) {
+        setTimeout(() => resolve(), timeoutMillis)
+      })
+    }
 
     /* The construct below is slightly convoluted. This is why:
        This function wants to return an observable. Since there is client-server communication involved, there is the
@@ -59,17 +65,12 @@ class EphemeralClient {
        itself does not guarantee that the listener is immediately in place. This is the function of the readyPromise.
        It gets confirmation from the server that the listener is in place, and is only resolved then.
     */
-    let readyPromise = new Promise((resolve, reject) => {
-      const timeoutPromise = (timeoutMillis) => {
-        return new Promise(function (resolve, reject) {
-          setTimeout(() => resolve(), timeoutMillis)
-        })
-      }
+    const readyPromise = new Promise((resolve, reject) => {
       socket = new WebSocketSubject({
-        'url': this.websocketEndpoint,
-        'WebSocketCtor': this.w3cwebsocket,
+        url: this.websocketEndpoint,
+        WebSocketCtor: this.w3cwebsocket,
         openObserver: {
-          'next': async (e) => {
+          next: async (event) => {
             // When the websocket is opened, the nonce is sent. The POST below sends the information to the server
             // that goes with this nonce, allowing it to start the actual observe.
             const MAX_TRIES = 10
@@ -77,15 +78,15 @@ class EphemeralClient {
               await timeoutPromise(50)
               try {
                 await axios.post(this.serverEndpoint + '/observe', {
-                  'nonce': nonce,
-                  'scope': publicKey,
-                  'accessorPubkey': accessorPubkey,
-                  'accessorSignature': accessorSignature
+                  nonce: nonce,
+                  scope: publicKey,
+                  accessorPubkey: accessorPubkey,
+                  accessorSignature: accessorSignature
                 }).then((r) => {
                   resolve()
                 })
                 return
-              } catch (e) {
+              } catch (err) {
                 // Purpose-ful no-op
               }
             }

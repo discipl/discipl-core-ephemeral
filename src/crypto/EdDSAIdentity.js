@@ -5,31 +5,29 @@ const EC_PREFIX = 'ec:'
 class EdDSAIdentity {
   constructor (reference = null, privkey = null) {
     if (reference == null) {
-      let keypair = forge.pki.ed25519.generateKeyPair()
-
-      let reference = EC_PREFIX + keypair.publicKey.toString('base64')
+      const keypair = forge.pki.ed25519.generateKeyPair()
 
       this.keypair = keypair
-      this.reference = reference
+      this.reference = EC_PREFIX + keypair.publicKey.toString('base64')
       this.ssid = {
-        'privkey': keypair.privateKey,
-        'metadata': {
+        privkey: keypair.privateKey,
+        metadata: {
         }
       }
     } else {
       this.keypair = {
-        'publicKey': Buffer.from(reference.replace(EC_PREFIX, ''), 'base64'),
-        'privateKey': privkey
+        publicKey: Buffer.from(reference.replace(EC_PREFIX, ''), 'base64'),
+        privateKey: privkey
       }
     }
   }
 
   sign (data) {
-    let md = CryptoUtil.objectToDigest(data)
+    const md = CryptoUtil.objectToDigest(data)
 
-    let signature = forge.pki.ed25519.sign({
-      'md': md,
-      'privateKey': this.keypair.privateKey
+    const signature = forge.pki.ed25519.sign({
+      md: md,
+      privateKey: this.keypair.privateKey
     })
 
     return signature.toString('base64')
@@ -37,9 +35,9 @@ class EdDSAIdentity {
 
   verify (data, signature) {
     return forge.pki.ed25519.verify({
-      'md': CryptoUtil.objectToDigest(data),
-      'signature': Buffer.from(signature, 'base64'),
-      'publicKey': this.keypair.publicKey
+      md: CryptoUtil.objectToDigest(data),
+      signature: Buffer.from(signature, 'base64'),
+      publicKey: this.keypair.publicKey
     })
   }
 }
