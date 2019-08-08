@@ -81,6 +81,7 @@ class EphemeralServer {
       this.ping(req.body.publicKey)
       res.send(stringify(result))
     } catch (e) {
+      this.logger.warn('Error while claiming', e)
       res.status(401).send(e)
     }
   }
@@ -92,6 +93,7 @@ class EphemeralServer {
       this.ping(await this.storage.getPublicKey(req.body.claimId))
       res.send(result)
     } catch (e) {
+      this.logger.warn('Error while getting', e)
       res.status(401).send(e)
     }
   }
@@ -108,6 +110,7 @@ class EphemeralServer {
   }
 
   async storeCert (req, res) {
+    this.logger.debug('Received request for certificate with fingerpint', req.body.fingerprint, 'through server')
     await this.storage.storeCert(req.body.fingerprint, forge.pki.certificateFromPem(req.body.cert))
     this.ping(req.body.fingerprint)
     res.sendStatus(200)

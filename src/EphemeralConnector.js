@@ -46,6 +46,7 @@ class EphemeralConnector extends BaseConnector {
    */
   configure (serverEndpoint, websocketEndpoint, w3cwebsocket, caching) {
     this.ephemeralClient = new EphemeralClient(serverEndpoint, websocketEndpoint, w3cwebsocket)
+    this.identityFactory.setClient(this.ephemeralClient)
     if (caching !== undefined) {
       this.caching = caching
     }
