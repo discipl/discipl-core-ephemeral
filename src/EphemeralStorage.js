@@ -137,10 +137,12 @@ class EphemeralStorage {
   }
 
   async storeCert (reference, cert) {
+    this.logger.debug('Storing', reference, 'with', cert)
     this.fingerprints[reference] = cert
   }
 
   async getCertForFingerprint (fingerprint) {
+    this.logger.debug('Requesting cert for fingerprint', fingerprint)
     return this.fingerprints[fingerprint]
   }
 
@@ -185,6 +187,7 @@ class EphemeralStorage {
       }
     }
 
+    console.log('Deleting fingerprint', fingerprint)
     delete this.fingerprints[fingerprint]
 
     // Iterate backwards to prevent issues with modifying while looping
