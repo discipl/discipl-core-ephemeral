@@ -1,6 +1,6 @@
 {
   "name": "@discipl/core-ephemeral",
-  "version": "0.10.4",
+  "version": "0.10.5",
   "description": "Discipl Core Ephemeral Connector",
   "main": "dist/index.js",
   "module": "src/index.js",
@@ -27,7 +27,6 @@
     "express": "4.17.1",
     "json-stable-stringify": "1.0.1",
     "loglevel": "1.6.3",
-    "node-cache": "4.2.1",
     "node-forge": "0.8.5",
     "rxjs": "6.5.2",
     "ws": "7.1.1"
