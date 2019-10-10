@@ -11,9 +11,9 @@ import IdentityFactory from './crypto/IdentityFactory'
  * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
  */
 class EphemeralConnector extends BaseConnector {
-  constructor (loglevel = 'warn') {
+  constructor (loglevel = 'warn', ephemeralClient = new EphemeralStorage()) {
     super()
-    this.ephemeralClient = new EphemeralStorage()
+    this.ephemeralClient = ephemeralClient;
     this.logger = log.getLogger('EphemeralConnector')
     this.logger.setLevel(loglevel)
     this.identityFactory = new IdentityFactory()

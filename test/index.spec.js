@@ -3,13 +3,14 @@
 
 import { expect } from 'chai'
 import sinon from 'sinon'
-import axios from 'axios'
+import fetch from 'node-forge'
 import EphemeralConnector from '../src/index'
 import EphemeralServer from '../src/EphemeralServer'
 import { take, toArray } from 'rxjs/operators'
 import { w3cwebsocket } from 'websocket'
 
 import { BaseConnector } from '@discipl/core-baseconnector'
+import EphemeralStorage from '../src/EphemeralStorage'
 
 let ephemeralServer
 let insecureServer
@@ -94,26 +95,26 @@ describe('discipl-ephemeral-connector', () => {
     })
 
     it('should be able to detect wrong signatures when getting a claim', async () => {
-      const ephemeralConnector = new EphemeralConnector()
-      ephemeralConnector.configure(EPHEMERAL_ENDPOINT, EPHEMERAL_WEBSOCKET_ENDPOINT, w3cwebsocket)
-      const axiosStub = sinon.stub(axios, 'post')
-      axiosStub.onFirstCall().returns({ data: '10F4oC/OrXA5cti7AfIZNo11F4zJGg1Kt05UUF6gMjU=' })
-      // Valid data would be eyJuZWVkIjoid2luZSJ9
-      axiosStub.onSecondCall().returns({
-        data:
-        {
-          data: 'eyJuZWVkIjoidGVhIn0=',
-          signature:
-            'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
-          previous:
-            'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
-        }
-      })
+      const ephemeralClient = new EphemeralStorage();
 
-      const claim = await ephemeralConnector.get('eyJub25jZSI6InN2TGlWVmRJVmJodmJPTW04VURESEhiUXNUR1BHazMzMDBXQ3N1UW5ncTA9Iiwic2lnbmF0dXJlIjoiMzFrVVVVUnk3OXpqUy9kekNBeDN5RmxhNHhkNUp5cGFsbExTa2Z6cmVYazJaY21NdU10TFBwb2MvcC95UE1YdUptdm5DbnR1WVp5NjNpNDFrL0lKQkE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0=')
+      const ephemeralConnector = new EphemeralConnector('warn', ephemeralClient)
 
-      // Restore stub for other tests
-      axiosStub.restore()
+      const identity = await ephemeralConnector.newIdentity()
+      const claim = ephemeralConnector
+      // const getPublicKeyStub = sinon.stub(ephemeralClient, 'getPublicKey')
+      // getPublicKeyStub.returns('10F4oC/OrXA5cti7AfIZNo11F4zJGg1Kt05UUF6gMjU=')
+      // const getStub = sinon.stub(ephemeralClient, 'get');
+      // // Valid data would be eyJuZWVkIjoid2luZSJ9
+      // getStub.returns(
+      //   {
+      //     data: 'eyJuZWVkIjoidGVhIn0=',
+      //     signature:
+      //       'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
+      //     previous:
+      //       'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
+      // })
+
+      const claim = await ephemeralConnector.get('link:discipl:eph:eyJub25jZSI6InN2TGlWVmRJVmJodmJPTW04VURESEhiUXNUR1BHazMzMDBXQ3N1UW5ncTA9Iiwic2lnbmF0dXJlIjoiMzFrVVVVUnk3OXpqUy9kekNBeDN5RmxhNHhkNUp5cGFsbExTa2Z6cmVYazJaY21NdU10TFBwb2MvcC95UE1YdUptdm5DbnR1WVp5NjNpNDFrL0lKQkE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0=')
 
       expect(claim).to.equal(null)
     })
