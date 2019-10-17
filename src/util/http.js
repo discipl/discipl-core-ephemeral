@@ -1,36 +1,29 @@
 
-
-async function post(url, body, fetchMethod = null) {
-  console.log(url, body)
+async function post (url, body, fetchMethod = null) {
   const fetch = typeof window !== 'undefined' && window.fetch != null ? window.fetch : await import('node-fetch')
-  const data = JSON.stringify(body);
+  const data = JSON.stringify(body)
   const headers = {
     'Content-Type': 'application/json',
     'Content-Length': data.length
   }
-
 
   const response = await fetch(url, {
     method: 'POST',
     headers: headers,
     body: data
   })
-  console.log(response)
 
   if (!response.ok) {
     throw Error(response.statusText)
   }
   try {
     const parsedResponse = await response.json()
-    console.log(parsedResponse)
     return {
-      'data': parsedResponse
+      data: parsedResponse
     }
-  }
-  catch (e) {
-    console.log(e)
+  } catch (e) {
     return {
-      'data': undefined
+      data: undefined
     }
   }
 }

@@ -34,36 +34,36 @@ class EphemeralStorage {
 
     const claimId = signature
 
-    if (Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
+    if (Object.keys(this.storage[publicKey].claims).includes(claimId)) {
       this.logger.info('Claim with id ', claimId, ' already existed')
       return claimId
     }
 
     this.claimOwners[claimId] = publicKey
-    this.storage[publicKey]['claims'][claimId] = { data: message, signature: signature, previous: this.storage[publicKey]['last'], access: [] }
-    this.storage[publicKey]['last'] = claimId
+    this.storage[publicKey].claims[claimId] = { data: message, signature: signature, previous: this.storage[publicKey].last, access: [] }
+    this.storage[publicKey].last = claimId
 
     if (Object.keys(message).includes(BaseConnector.ALLOW) || claim.access) {
       const access = message[BaseConnector.ALLOW] || claim.access
       let object = this.storage[publicKey]
 
       if (BaseConnector.isLink(access.scope) && this.claimOwners[BaseConnector.referenceFromLink(access.scope)] === publicKey) {
-        object = this.storage[publicKey]['claims'][BaseConnector.referenceFromLink(access.scope)]
+        object = this.storage[publicKey].claims[BaseConnector.referenceFromLink(access.scope)]
       }
 
       if (access.did == null) {
-        object['access'] = true
+        object.access = true
       } else {
-        if (object['access'] !== true) {
+        if (object.access !== true) {
           if (BaseConnector.isDid(access.did)) {
-            object['access'].push(BaseConnector.referenceFromDid(access.did))
+            object.access.push(BaseConnector.referenceFromDid(access.did))
           }
         }
       }
     }
 
     for (const listener of this.storage[publicKey].observers.concat(this.globalObservers)) {
-      const sourceClaim = this.storage[publicKey]['claims'][claimId]
+      const sourceClaim = this.storage[publicKey].claims[claimId]
       const claimForObserver = {
         data: sourceClaim.data,
         signature: sourceClaim.signature,
@@ -89,7 +89,7 @@ class EphemeralStorage {
       return false
     }
 
-    for (const accessObject of [this.storage[claimPublicKey]['access'], this.storage[claimPublicKey]['claims'][claimId]['access']]) {
+    for (const accessObject of [this.storage[claimPublicKey].access, this.storage[claimPublicKey].claims[claimId].access]) {
       if (accessObject === true) {
         return true
       } else {
@@ -110,8 +110,8 @@ class EphemeralStorage {
 
     const publicKey = this.claimOwners[claimId]
 
-    if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey]['claims']).includes(claimId)) {
-      const sourceClaim = this.storage[publicKey]['claims'][claimId]
+    if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey].claims).includes(claimId)) {
+      const sourceClaim = this.storage[publicKey].claims[claimId]
       const claim = {
         data: sourceClaim.data,
         signature: sourceClaim.signature,
@@ -127,8 +127,8 @@ class EphemeralStorage {
   }
 
   async getLatest (publicKey) {
-    if (Object.keys(this.storage).includes(publicKey) && this.storage[publicKey]['last'] != null) {
-      return this.storage[publicKey]['last']
+    if (Object.keys(this.storage).includes(publicKey) && this.storage[publicKey].last != null) {
+      return this.storage[publicKey].last
     }
   }
 

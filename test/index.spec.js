@@ -2,8 +2,6 @@
 /* eslint-disable no-unused-expressions */
 
 import { expect } from 'chai'
-import sinon from 'sinon'
-import fetch from 'node-forge'
 import EphemeralConnector from '../src/index'
 import EphemeralServer from '../src/EphemeralServer'
 import { take, toArray } from 'rxjs/operators'
@@ -95,28 +93,20 @@ describe('discipl-ephemeral-connector', () => {
     })
 
     it('should be able to detect wrong signatures when getting a claim', async () => {
-      const ephemeralClient = new EphemeralStorage();
+      const ephemeralClient = new EphemeralStorage()
 
-      const ephemeralConnector = new EphemeralConnector('warn', ephemeralClient)
+      // corrects signature = zxnSFJ1jk0RuoCoEkKJMLXSj08gx+1Syt1W2D3GdczfDwXFsYPH/y55bz85mI1z6QR3NXERcuww85Epq9MErDg==
+      const reference = 'IIsy36FkcbWXzkskf501UWlSccfQqrHzXRM9iUXw0QiSdRmyEODtYIdRFnz5jFPgIYH96KzOwKia6FRM+j+qAA=='
+      const pubkey = 'ec:DudQN4jBeZM5ht/haJHGIPGi+dl1kKYGdDoR/ZfW/KQ='
+      const signature = 'zxnSFJ1jk0RuoCoEkKJMLXSj08gx+2Txu1W2D3GdczfDwXFsYPH/y55bz85mI1z6QR3NXERcuww85Epq9MErDg=='
+      let err
+      try {
+        await ephemeralClient.get(reference, pubkey, signature)
+      } catch (e) {
+        err = e
+      }
 
-      const identity = await ephemeralConnector.newIdentity()
-      const claim = ephemeralConnector
-      // const getPublicKeyStub = sinon.stub(ephemeralClient, 'getPublicKey')
-      // getPublicKeyStub.returns('10F4oC/OrXA5cti7AfIZNo11F4zJGg1Kt05UUF6gMjU=')
-      // const getStub = sinon.stub(ephemeralClient, 'get');
-      // // Valid data would be eyJuZWVkIjoid2luZSJ9
-      // getStub.returns(
-      //   {
-      //     data: 'eyJuZWVkIjoidGVhIn0=',
-      //     signature:
-      //       'E4QQuQk+7wL7sW+SLNeVjQtKqAZMFItnn2pPc4QWM01qH3TjiqhVyh2sQGSKiPil2wwRn+XKcltxmxGPG8T4CQ==',
-      //     previous:
-      //       'JplYGnYoheiLYxFfHgAzS/4w7Whd9+WEig9GPMOoJz5rsQs6npqAwbhw3cIsdyi50UniurIbuvbDBSZPFDqmAA=='
-      // })
-
-      const claim = await ephemeralConnector.get('link:discipl:eph:eyJub25jZSI6InN2TGlWVmRJVmJodmJPTW04VURESEhiUXNUR1BHazMzMDBXQ3N1UW5ncTA9Iiwic2lnbmF0dXJlIjoiMzFrVVVVUnk3OXpqUy9kekNBeDN5RmxhNHhkNUp5cGFsbExTa2Z6cmVYazJaY21NdU10TFBwb2MvcC95UE1YdUptdm5DbnR1WVp5NjNpNDFrL0lKQkE9PSIsInB1YmxpY0tleSI6ImtTRGdtRi92d2cybE80NmdnTVV4blBLdHVlY3dPT2VYWUwxdnMyVVZVbFk9In0=')
-
-      expect(claim).to.equal(null)
+      expect(err.message).to.equal('Invalid signature')
     })
   })
   describe('just in server mode', () => {
