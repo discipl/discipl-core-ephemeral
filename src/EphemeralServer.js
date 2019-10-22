@@ -6,7 +6,6 @@ import forge from 'node-forge'
 import * as log from 'loglevel'
 import fs from 'fs'
 import https from 'https'
-import http from 'http'
 
 /**
  * EphemeralServer provides a http/ws interface for the logic contained in the EphemeralStorage class
@@ -39,14 +38,10 @@ class EphemeralServer {
     app.post('/getCert', (req, res) => this.getCert(req, res))
     app.post('/observe', (req, res) => this.observe(req, res))
 
-    if (this.certificatePath != null) {
-      this.server = https.createServer({
-        key: fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
-        cert: fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
-      }, app).listen(this.port, null, 511, () => this.logger.info(`Secure ephemeral server listening on ${this.port}!`))
-    } else {
-      this.server = http.createServer(app).listen(this.port, null, 511, () => this.logger.info(`Insecure ephemeral server listening on ${this.port}!`))
-    }
+    this.server = https.createServer({
+      key: fs.readFileSync(this.privateKeyPath, { encoding: 'utf-8' }),
+      cert: fs.readFileSync(this.certificatePath, { encoding: 'utf-8' })
+    }, app).listen(this.port, null, 511, () => this.logger.info(`Secure ephemeral server listening on ${this.port}!`))
 
     const wss = new ws.Server({ server: this.server })
     wss.on('connection', (wsCon) => {

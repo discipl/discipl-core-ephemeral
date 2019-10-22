@@ -13,35 +13,35 @@ class EphemeralClient {
   }
 
   async claim (claim) {
-    const response = await axios.post(this.serverEndpoint + '/claim', claim)
+    const response = await axios.post(encodeURI(this.serverEndpoint + '/claim'), claim)
     return response.data
   }
 
   async get (claimId, accessorPubkey, accessorSignature) {
-    const response = await axios.post(this.serverEndpoint + '/get', { claimId: claimId, accessorPubkey: accessorPubkey, accessorSignature: accessorSignature })
+    const response = await axios.post(encodeURI(this.serverEndpoint + '/get'), { claimId: claimId, accessorPubkey: accessorPubkey, accessorSignature: accessorSignature })
     return response.data
   }
 
   async getLatest (publicKey) {
-    const response = await axios.post(this.serverEndpoint + '/getLatest', { publicKey: publicKey })
+    const response = await axios.post(encodeURI(this.serverEndpoint + '/getLatest'), { publicKey: publicKey })
 
     return response.data
   }
 
   async getPublicKey (claimId) {
-    const response = await axios.post(this.serverEndpoint + '/getPublicKey', { claimId: claimId })
+    const response = await axios.post(encodeURI(this.serverEndpoint + '/getPublicKey'), { claimId: claimId })
 
     return response.data
   }
 
   async getCertForFingerprint (fingerprint) {
-    const response = await axios.post(this.serverEndpoint + '/getCert', { fingerprint: fingerprint })
+    const response = await axios.post(encodeURI(this.serverEndpoint + '/getCert'), { fingerprint: fingerprint })
 
     return forge.pki.certificateFromPem(response.data)
   }
 
   async storeCert (fingerprint, cert) {
-    const response = await axios.post(this.serverEndpoint + '/storeCert', { fingerprint: fingerprint, cert: forge.pki.certificateToPem(cert) })
+    const response = await axios.post(encodeURI(this.serverEndpoint + '/storeCert'), { fingerprint: fingerprint, cert: forge.pki.certificateToPem(cert) })
 
     return response.data
   }
@@ -77,7 +77,7 @@ class EphemeralClient {
             for (let i = 0; i < MAX_TRIES; i++) {
               await timeoutPromise(50)
               try {
-                await axios.post(this.serverEndpoint + '/observe', {
+                await axios.post(encodeURI(this.serverEndpoint + '/observe'), {
                   nonce: nonce,
                   scope: publicKey,
                   accessorPubkey: accessorPubkey,
