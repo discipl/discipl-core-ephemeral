@@ -7,7 +7,9 @@ async function post (url, body, fetchMethod = null) {
     'Content-Length': data.length
   }
 
-  const response = await fetch(url, {
+  const encodedUrl = encodeURI(url)
+
+  const response = await fetch(encodedUrl, {
     method: 'POST',
     headers: headers,
     body: data
