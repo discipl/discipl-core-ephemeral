@@ -11,9 +11,9 @@ import IdentityFactory from './crypto/IdentityFactory'
  * storage backend. If configured with endpoints, it will use the EphemeralServer as a backend.
  */
 class EphemeralConnector extends BaseConnector {
-  constructor (loglevel = 'warn') {
+  constructor (loglevel = 'warn', ephemeralClient = new EphemeralStorage()) {
     super()
-    this.ephemeralClient = new EphemeralStorage()
+    this.ephemeralClient = ephemeralClient
     this.logger = log.getLogger('EphemeralConnector')
     this.logger.setLevel(loglevel)
     this.identityFactory = new IdentityFactory()
@@ -210,7 +210,7 @@ class EphemeralConnector extends BaseConnector {
     }
 
     if (importerDid != null) {
-      claim['access'] = {
+      claim.access = {
         scope: link,
         did: importerDid
       }
@@ -251,27 +251,27 @@ class EphemeralConnector extends BaseConnector {
     // TODO: Performance optimization: Move the filter to the server to send less data over the websockets
     const processedSubject = subject.pipe(flatMap(async (claim) => {
       const identity = await this.identityFactory.fromReference(claim.pubkey)
-      identity.verify(claim['claim'].data, claim['claim'].signature)
+      identity.verify(claim.claim.data, claim.claim.signature)
 
-      if (claim['claim'].previous) {
-        claim['claim'].previous = this.linkFromReference(claim['claim'].previous)
+      if (claim.claim.previous) {
+        claim.claim.previous = this.linkFromReference(claim.claim.previous)
       }
 
-      claim['link'] = this.linkFromReference(claim['claim'].signature)
-      delete claim['claim'].signature
-      claim['did'] = this.didFromReference(claim['pubkey'])
-      delete claim['pubkey']
+      claim.link = this.linkFromReference(claim.claim.signature)
+      delete claim.claim.signature
+      claim.did = this.didFromReference(claim.pubkey)
+      delete claim.pubkey
 
       return claim
     })).pipe(filter(claim => {
       if (claimFilter != null) {
         for (const predicate of Object.keys(claimFilter)) {
-          if (claim['claim']['data'][predicate] == null) {
+          if (claim.claim.data[predicate] == null) {
             // Predicate not present in claim
             return false
           }
 
-          if (claimFilter[predicate] != null && claimFilter[predicate] !== claim['claim']['data'][predicate]) {
+          if (claimFilter[predicate] != null && claimFilter[predicate] !== claim.claim.data[predicate]) {
             // Object is provided in filter, but does not match with actual claim
             return false
           }

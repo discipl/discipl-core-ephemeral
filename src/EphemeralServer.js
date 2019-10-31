@@ -86,7 +86,7 @@ class EphemeralServer {
       const result = await this.storage.get(req.body.claimId, req.body.accessorPubkey, req.body.accessorSignature)
       this.ping(req.body.accessorPubkey)
       this.ping(await this.storage.getPublicKey(req.body.claimId))
-      res.send(result)
+      res.send(stringify(result))
     } catch (e) {
       this.logger.warn('Error while getting', e)
       res.status(401).send(e)
@@ -94,27 +94,27 @@ class EphemeralServer {
   }
 
   async getLatest (req, res) {
-    res.send(await this.storage.getLatest(req.body.publicKey))
+    res.send(stringify(await this.storage.getLatest(req.body.publicKey)))
     this.ping(req.body.accessorPubkey)
   }
 
   async getPublicKey (req, res) {
     const result = await this.storage.getPublicKey(req.body.claimId)
     this.ping(result)
-    res.send(result)
+    res.send(stringify(result))
   }
 
   async storeCert (req, res) {
     this.logger.debug('Received request for certificate with fingerpint', req.body.fingerprint, 'through server')
     await this.storage.storeCert(req.body.fingerprint, forge.pki.certificateFromPem(req.body.cert))
-    this.ping(req.body.fingerprint)
-    res.sendStatus(200)
+    this.ping(stringify(req.body.fingerprint))
+    res.send({})
   }
 
   async getCert (req, res) {
     const result = await this.storage.getCertForFingerprint(req.body.fingerprint)
     this.ping(req.body.fingerprint)
-    res.send(forge.pki.certificateToPem(result))
+    res.send(stringify(forge.pki.certificateToPem(result)))
   }
 
   async observe (req, res) {
@@ -144,7 +144,7 @@ class EphemeralServer {
 
     subject.subscribe(observer)
 
-    res.sendStatus(200)
+    res.send({})
   }
 
   close () {

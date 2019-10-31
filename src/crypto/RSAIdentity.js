@@ -33,7 +33,13 @@ class RSAIdentity {
 
   verify (data, signature) {
     const digest = CryptoUtil.objectToDigest(data)
-    return this.cert.publicKey.verify(digest.digest().bytes(), forge.util.decode64(signature, 'base64'))
+    const verify = this.cert.publicKey.verify(digest.digest().bytes(), forge.util.decode64(signature, 'base64'))
+
+    if (!verify) {
+      throw new Error('Invalid signature')
+    }
+
+    return verify
   }
 }
 

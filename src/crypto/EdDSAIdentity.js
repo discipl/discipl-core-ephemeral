@@ -34,11 +34,17 @@ class EdDSAIdentity {
   }
 
   verify (data, signature) {
-    return forge.pki.ed25519.verify({
+    const verify = forge.pki.ed25519.verify({
       md: CryptoUtil.objectToDigest(data),
       signature: Buffer.from(signature, 'base64'),
       publicKey: this.keypair.publicKey
     })
+
+    if (!verify) {
+      throw new Error('Invalid signature')
+    }
+
+    return verify
   }
 }
 
