@@ -2,9 +2,9 @@ import { filter, flatMap } from 'rxjs/operators'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
-
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
+import { deepCopy } from './util/deepCopy'
 
 /**
  * The EphemeralConnector is a connector to be used in discipl-core. If unconfigured, it will use an in-memory
@@ -148,7 +148,7 @@ class EphemeralConnector extends BaseConnector {
       if (did) {
         cacheKey += did
       }
-      retrievedObj = this.myCache[cacheKey]
+      retrievedObj = deepCopy(this.myCache[cacheKey])
     }
     if (!retrievedObj) {
       const reference = BaseConnector.referenceFromLink(link)
@@ -178,7 +178,7 @@ class EphemeralConnector extends BaseConnector {
         previous: this.linkFromReference(result.previous)
       }
       if (this.caching) {
-        this.myCache[cacheKey] = retrievedObj
+        this.myCache[cacheKey] = deepCopy(retrievedObj)
       }
     }
     return retrievedObj
