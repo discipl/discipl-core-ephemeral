@@ -40,6 +40,57 @@ describe('discipl-ephemeral-connector', () => {
       expect(identity.privkey.length).to.equal(64)
     })
 
+    it('should return deep copy', async () => {
+      const ephemeralConnector = new EphemeralConnector()
+
+      const identity = await ephemeralConnector.newIdentity()
+
+      const data = { need: 'beer', wants: ['one', 'two'] }
+      const claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, data)
+
+      await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
+      expect(claimLink).to.be.a('string')
+      expect(claimLink.length).to.equal(111)
+
+      const fetchedClaim1 = await ephemeralConnector.get(claimLink)
+      fetchedClaim1.data.wants = []
+
+      const fetchedClaim2 = await ephemeralConnector.get(claimLink)
+      expect(fetchedClaim2).to.deep.equal({
+        data: {
+          need: 'beer',
+          wants: ['one', 'two']
+        },
+        previous: null
+      })
+    })
+
+    it('should claim deep copy', async () => {
+      const ephemeralConnector = new EphemeralConnector()
+
+      const identity = await ephemeralConnector.newIdentity()
+
+      const data = { need: 'beer', wants: ['one', 'two'] }
+      const claimLink = await ephemeralConnector.claim(identity.did, identity.privkey, data)
+      data.wants = []
+
+      await ephemeralConnector.claim(identity.did, identity.privkey, { [BaseConnector.ALLOW]: {} })
+
+      expect(claimLink).to.be.a('string')
+      expect(claimLink.length).to.equal(111)
+
+      const claim = await ephemeralConnector.get(claimLink)
+
+      expect(claim).to.deep.equal({
+        data: {
+          need: 'beer',
+          wants: ['one', 'two']
+        },
+        previous: null
+      })
+    })
+
     it('should be able to import an identity with a public key', async () => {
       const cert = '-----BEGIN CERTIFICATE-----\r\n' +
         'MIIGGzCCBAOgAwIBAgIUDqjzvfWzZ7dyHuIBerf5m/N09qMwDQYJKoZIhvcNAQEL\r\n' +

@@ -2,7 +2,7 @@ import { filter, flatMap } from 'rxjs/operators'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import EphemeralClient from './EphemeralClient'
 import EphemeralStorage from './EphemeralStorage'
-
+import * as lodash from 'lodash'
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
 
@@ -148,7 +148,7 @@ class EphemeralConnector extends BaseConnector {
       if (did) {
         cacheKey += did
       }
-      retrievedObj = this.myCache[cacheKey]
+      retrievedObj = lodash.cloneDeep(this.myCache[cacheKey])
     }
     if (!retrievedObj) {
       const reference = BaseConnector.referenceFromLink(link)
@@ -178,7 +178,7 @@ class EphemeralConnector extends BaseConnector {
         previous: this.linkFromReference(result.previous)
       }
       if (this.caching) {
-        this.myCache[cacheKey] = retrievedObj
+        this.myCache[cacheKey] = lodash.cloneDeep(retrievedObj)
       }
     }
     return retrievedObj

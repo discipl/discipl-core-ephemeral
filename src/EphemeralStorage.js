@@ -2,6 +2,7 @@ import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
+import * as lodash from 'lodash'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -19,17 +20,18 @@ class EphemeralStorage {
   }
 
   async claim (claim) {
-    const verification = await this._verifySignature(claim)
+    const claimCopy = lodash.cloneDeep(claim)
+    const verification = await this._verifySignature(claimCopy)
 
     if (verification !== true) {
-      this.logger.warn('Invalid signature on claim by pubkey', claim.publicKey)
+      this.logger.warn('Invalid signature on claim by pubkey', claimCopy.publicKey)
       return null
     }
 
-    const signature = claim.signature
-    const message = claim.message
+    const signature = claimCopy.signature
+    const message = claimCopy.message
 
-    const publicKey = claim.publicKey
+    const publicKey = claimCopy.publicKey
     this._lazyInitStorage(publicKey)
 
     const claimId = signature
@@ -43,8 +45,8 @@ class EphemeralStorage {
     this.storage[publicKey].claims[claimId] = { data: message, signature: signature, previous: this.storage[publicKey].last, access: [] }
     this.storage[publicKey].last = claimId
 
-    if (Object.keys(message).includes(BaseConnector.ALLOW) || claim.access) {
-      const access = message[BaseConnector.ALLOW] || claim.access
+    if (Object.keys(message).includes(BaseConnector.ALLOW) || claimCopy.access) {
+      const access = message[BaseConnector.ALLOW] || claimCopy.access
       let object = this.storage[publicKey]
 
       if (BaseConnector.isLink(access.scope) && this.claimOwners[BaseConnector.referenceFromLink(access.scope)] === publicKey) {
@@ -113,7 +115,7 @@ class EphemeralStorage {
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey].claims).includes(claimId)) {
       const sourceClaim = this.storage[publicKey].claims[claimId]
       const claim = {
-        data: sourceClaim.data,
+        data: lodash.cloneDeep(sourceClaim.data),
         signature: sourceClaim.signature,
         previous: sourceClaim.previous
       }
