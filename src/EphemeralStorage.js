@@ -2,7 +2,7 @@ import { Subject } from 'rxjs'
 import { BaseConnector } from '@discipl/core-baseconnector'
 import * as log from 'loglevel'
 import IdentityFactory from './crypto/IdentityFactory'
-import * as lodash from 'lodash'
+import { deepCopy } from './util/deepCopy'
 
 /**
  * EphemeralStorage is responsible for managing claims. It validates the signature when the claim comes in.
@@ -20,7 +20,7 @@ class EphemeralStorage {
   }
 
   async claim (claim) {
-    const claimCopy = lodash.cloneDeep(claim)
+    const claimCopy = deepCopy(claim)
     const verification = await this._verifySignature(claimCopy)
 
     if (verification !== true) {
@@ -115,7 +115,7 @@ class EphemeralStorage {
     if (Object.keys(this.storage).includes(publicKey) && Object.keys(this.storage[publicKey].claims).includes(claimId)) {
       const sourceClaim = this.storage[publicKey].claims[claimId]
       const claim = {
-        data: lodash.cloneDeep(sourceClaim.data),
+        data: deepCopy(sourceClaim.data),
         signature: sourceClaim.signature,
         previous: sourceClaim.previous
       }
