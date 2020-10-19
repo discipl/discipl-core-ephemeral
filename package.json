@@ -1,6 +1,6 @@
 {
   "name": "@discipl/core-ephemeral",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "description": "Discipl Core Ephemeral Connector",
   "main": "dist/index.js",
   "module": "src/index.js",
