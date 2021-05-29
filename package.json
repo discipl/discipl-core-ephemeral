@@ -30,7 +30,7 @@
     "node-fetch": "^2.6.1",
     "node-forge": "^0.10.0",
     "rxjs": "6.5.2",
-    "ws": "7.1.1"
+    "ws": "7.4.6"
   },
   "devDependencies": {
     "@babel/cli": "7.11.5",
